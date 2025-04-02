@@ -17,6 +17,7 @@
 
 /* * ***************************Includes********************************* */
 require_once __DIR__  . '/../../../../core/php/core.inc.php';
+require_once dirname(__FILE__) . '/../lib/ModbusClient.php';
 
 class APSystemsSunspec extends eqLogic {
     public function preSave() {
@@ -83,15 +84,13 @@ class APSystemsSunspec extends eqLogic {
 
         while ($modbusId <= $maxAttempts) {
             try {
-                // Interrogation Modbus du registre 40070
                 $response = $this->queryModbus($ip, $modbusId, 40070);
                 
                 if ($response === false) {
-                    // Pas de réponse, on arrête le scan
-                    break;
+                    log::add('APSystemsSunspec', 'debug', "Aucune réponse pour Modbus ID $modbusId, fin du scan");
+                    break; // Pas de réponse, fin du scan
                 }
 
-                // Vérifie la réponse pour déterminer le type
                 $type = null;
                 if ($response == 101) {
                     $type = 'monophasé';
@@ -100,44 +99,64 @@ class APSystemsSunspec extends eqLogic {
                 }
 
                 if ($type !== null) {
-                    // Création d'un équipement "fils"
                     $this->createChildEquipment($ip, $modbusId, $type);
+                    log::add('APSystemsSunspec', 'info', "Micro-onduleur détecté : ID $modbusId ($type)");
                 }
 
                 $modbusId++;
             } catch (Exception $e) {
                 log::add('APSystemsSunspec', 'debug', 'Erreur Modbus ID ' . $modbusId . ' : ' . $e->getMessage());
-                break; // Arrête si une erreur survient
+                break;
             }
         }
     }
 
-    // Méthode pour interroger Modbus (exemple avec phpmodbus ou une lib similaire)
     private function queryModbus($ip, $modbusId, $register) {
-        // Implémentation fictive : utilise une bibliothèque comme PhpModbus
-        // Retourne la valeur du registre 40070 ou false si pas de réponse
-        // Exemple avec une simulation :
-        $client = new ModbusClient($ip, 502); // Port Modbus par défaut
-        $client->setSlave($modbusId);
-        $response = $client->readHoldingRegisters($register, 1);
-        if ($response === false || empty($response)) {
+        try {
+            $client = new ModbusClient($ip, 502, 5); // IP, port, timeout 5s
+            $client->setSlave($modbusId);
+            $response = $client->readHoldingRegisters($register, 1);
+
+            if ($response === false || empty($response)) {
+                return false;
+            }
+            return $response[0]; // Retourne la première valeur
+        } catch (Exception $e) {
+            log::add('APSystemsSunspec', 'error', 'Erreur Modbus : ' . $e->getMessage());
             return false;
         }
-        return $response[0]; // Valeur du registre
     }
 
-    // Méthode pour créer un équipement "fils"
+    public function setParameter($register, $value) {
+        $ip = $this->getLogicalId();
+        $modbusId = $this->getConfiguration('modbus_id', 1); // Par défaut 1 si non défini
+
+        try {
+            $client = new ModbusClient($ip, 502, 5);
+            $client->setSlave($modbusId);
+            $success = $client->writeSingleRegister($register, $value);
+
+            if ($success) {
+                log::add('APSystemsSunspec', 'info', "Écriture réussie : registre $register, valeur $value pour Modbus ID $modbusId");
+                return true;
+            }
+            return false;
+        } catch (Exception $e) {
+            log::add('APSystemsSunspec', 'error', "Erreur lors de l'écriture Modbus : " . $e->getMessage());
+            return false;
+        }
+    }
+
     private function createChildEquipment($ip, $modbusId, $type) {
         $newEqLogic = new APSystemsSunspec();
         $newEqLogic->setName('Micro-onduleur ' . $modbusId . ' (' . $type . ')');
         $newEqLogic->setLogicalId($ip . '_ID' . $modbusId);
         $newEqLogic->setEqType_name('APSystemsSunspec');
-        $newEqLogic->setConfiguration('parent_id', $this->getId()); // Lien avec l'équipement parent
-        $newEqLogic->setConfiguration('modbus_id', $modbusId); // Stocke le Modbus ID
-        $newEqLogic->setConfiguration('type', $type); // Stocke le type (monophasé/triphasé)
+        $newEqLogic->setConfiguration('parent_id', $this->getId());
+        $newEqLogic->setConfiguration('modbus_id', $modbusId);
+        $newEqLogic->setConfiguration('type', $type);
         $newEqLogic->save();
 
-        // Ajoute des commandes spécifiques au micro-onduleur
         $newEqLogic->checkAndCreateCommands();
     }
 
