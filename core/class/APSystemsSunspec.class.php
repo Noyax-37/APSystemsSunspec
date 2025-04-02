@@ -82,10 +82,12 @@ class APSystemsSunspec extends eqLogic {
         $modbusId = 1;
         $maxAttempts = 247; // Limite Modbus (1 à 247)
 
+        log::add('APSystemsSunspec', 'info', "Début du scan pour IP : $ip");
         while ($modbusId <= $maxAttempts) {
             try {
                 $response = $this->queryModbus($ip, $modbusId, 40070);
-                
+                log::add('APSystemsSunspec', 'debug', "Réponse Modbus ID $modbusId : " . ($response === false ? 'aucune' : $response));
+
                 if ($response === false) {
                     log::add('APSystemsSunspec', 'debug', "Aucune réponse pour Modbus ID $modbusId, fin du scan");
                     break; // Pas de réponse, fin du scan
@@ -109,6 +111,7 @@ class APSystemsSunspec extends eqLogic {
                 break;
             }
         }
+        log::add('APSystemsSunspec', 'info', 'Scan terminé');
     }
 
     private function queryModbus($ip, $modbusId, $register) {
@@ -127,10 +130,23 @@ class APSystemsSunspec extends eqLogic {
         }
     }
 
+    private function createChildEquipment($ip, $modbusId, $type) {
+        $newEqLogic = new APSystemsSunspec();
+        $newEqLogic->setName('Micro-onduleur ' . $modbusId . ' (' . $type . ')');
+        $newEqLogic->setLogicalId($ip . '_ID' . $modbusId);
+        $newEqLogic->setEqType_name('APSystemsSunspec');
+        $newEqLogic->setConfiguration('parent_id', $this->getId());
+        $newEqLogic->setConfiguration('modbus_id', $modbusId);
+        $newEqLogic->setConfiguration('type', $type);
+        $newEqLogic->save();
+
+        $newEqLogic->checkAndCreateCommands();
+        log::add('APSystemsSunspec', 'debug', "Équipement créé avec ID : " . $newEqLogic->getId());
+    }
+
     public function setParameter($register, $value) {
         $ip = $this->getLogicalId();
-        $modbusId = $this->getConfiguration('modbus_id', 1); // Par défaut 1 si non défini
-
+        $modbusId = $this->getConfiguration('modbus_id', 1);
         try {
             $client = new ModbusClient($ip, 502, 5);
             $client->setSlave($modbusId);
@@ -147,31 +163,16 @@ class APSystemsSunspec extends eqLogic {
         }
     }
 
-    private function createChildEquipment($ip, $modbusId, $type) {
-        $newEqLogic = new APSystemsSunspec();
-        $newEqLogic->setName('Micro-onduleur ' . $modbusId . ' (' . $type . ')');
-        $newEqLogic->setLogicalId($ip . '_ID' . $modbusId);
-        $newEqLogic->setEqType_name('APSystemsSunspec');
-        $newEqLogic->setConfiguration('parent_id', $this->getId());
-        $newEqLogic->setConfiguration('modbus_id', $modbusId);
-        $newEqLogic->setConfiguration('type', $type);
-        $newEqLogic->save();
-
-        $newEqLogic->checkAndCreateCommands();
-    }
-
 }
 
 // Classe pour les commandes
 class APSystemsSunspecCmd extends cmd {
     // Méthode execute pour les actions (optionnel)
     public function execute($_options = array()) {
-        $eqLogic = $this->getEqLogic(); // Récupère l'équipement associé
-        switch ($this->getLogicalId()) {
-            case 'refresh':
-                // Logique pour rafraîchir les données depuis l'IP
-                $eqLogic->refreshData();
-                break;
+        if ($this->getLogicalId() == 'set_value') {
+            $eqLogic = $this->getEqLogic();
+            $value = isset($_options['slider']) ? intval($_options['slider']) : 0;
+            $eqLogic->setParameter(40071, $value);
         }
     }
 }
