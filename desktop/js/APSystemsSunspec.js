@@ -121,3 +121,40 @@ $('.eqLogicAction[data-action=addAPSystemsSunspecEq]').off('click').on('click', 
 		}}
 	});
 });
+
+$(document).ready(function() {
+  console.log('APSystemsSunspec.js chargé');
+
+  $('#scanMicroInverters').on('click', function() {
+      console.log('Clic sur Scan des micro-onduleurs');
+      var eqLogicId = $('.eqLogicAttr[data-l1key="id"]').val();
+      if (!eqLogicId) {
+          console.log('Erreur : Aucun ID trouvé');
+          $('#div_alert').showAlert({message: '{{Aucun équipement sélectionné}}', level: 'danger'});
+          return;
+      }
+      console.log('Envoi AJAX avec ID : ' + eqLogicId);
+      $.ajax({
+          type: 'POST',
+          url: 'plugins/APSystemsSunspec/core/ajax/APSystemsSunspec.ajax.php',
+          data: {
+              action: 'scanMicroInverters',
+              id: eqLogicId
+          },
+          dataType: 'json',
+          error: function(request, status, error) {
+              console.log('Erreur AJAX : ' + error);
+              $('#div_alert').showAlert({message: error, level: 'danger'});
+          },
+          success: function(data) {
+              console.log('Réponse AJAX : ' + JSON.stringify(data));
+              if (data.state !== 'ok') {
+                  $('#div_alert').showAlert({message: data.result, level: 'danger'});
+              } else {
+                  $('#div_alert').showAlert({message: '{{Scan terminé avec succès}}', level: 'success'});
+                  jeedom.eqLogic.refreshAll();
+              }
+          }
+      });
+  });
+});

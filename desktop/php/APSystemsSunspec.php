@@ -8,56 +8,48 @@ sendVarToJS('eqType', $plugin->getId());
 $eqLogics = eqLogic::byType($plugin->getId());
 ?>
 
-<?php
-/**
- * @param string $action_name Nom de l'action
- * @param string $fa_icon Icône FontAwesome
- * @param string $action Action associée
- * @param string $class Classe CSS supplémentaire
- */
-function displayActionCard($action_name, $fa_icon, $action = '', $class = '') {
-    echo '<div class="eqLogicAction cursor ' . $class . '" data-action="' . $action . '">';
-    echo '<i class="fas ' . $fa_icon . '"></i><br/><span>' . $action_name . '</span>';
-    echo '</div>' . "\n";
-}
-?>
-
 <div class="row row-overflow">
     <!-- Page d'accueil du plugin -->
     <div class="col-xs-12 eqLogicThumbnailDisplay">
         <div class="row">
             <div class="col-sm-10">
                 <legend><i class="fas fa-cog"></i> {{Gestion}}</legend>
-                <!-- Boutons de gestion du plugin -->
                 <div class="eqLogicThumbnailContainer">
-                    <?php
-                    displayActionCard('{{Ajouter un ECU}}', 'fa-plus-circle', 'addAPSystemsSunspecEq', 'logoSecondary');
-                    displayActionCard('{{Configuration}}', 'fa-wrench', 'gotoPluginConf', 'logoSecondary');
-                    ?>
-                    <?php
-                    $jeedomVersion = jeedom::version() ?? '0';
-                    $displayInfoValue = version_compare($jeedomVersion, '4.4.0', '>=');
-                    if ($displayInfoValue) {
-                    ?>
-                        <div class="col-sm-2">
-                            <div class="eqLogicThumbnailContainer">
-                                <div class="cursor eqLogicAction logoSecondary warning" data-action="createCommunityPost">
-                                    <i class="fas fa-ambulance"></i>
-                                    <br>
-                                    <span class="warning">{{Créer un post Community}}</span>
-                                </div>
-                            </div>
-                        </div>
-                    <?php
-                    }
-                    ?>
+                    <div class="cursor eqLogicAction logoPrimary" data-action="add">
+                        <i class="fas fa-plus-circle"></i>
+                        <br>
+                        <span>{{Ajouter}}</span>
+                    </div>
+                    <div class="cursor eqLogicAction logoSecondary" data-action="gotoPluginConf">
+                        <i class="fas fa-wrench"></i>
+                        <br>
+                        <span>{{Configuration}}</span>
+                    </div>
                 </div>
             </div>
+            <?php
+            $jeedomVersion = jeedom::version() ?? '0';
+            $displayInfoValue = version_compare($jeedomVersion, '4.4.0', '>=');
+            if ($displayInfoValue) {
+            ?>
+                <div class="col-sm-2">
+                    <legend><i class="fas fa-comments"></i> {{Community}}</legend>
+                    <div class="eqLogicThumbnailContainer">
+                        <div class="cursor eqLogicAction logoSecondary" data-action="createCommunityPost">
+                            <i class="fas fa-ambulance"></i>
+                            <br>
+                            <span style="color:var(--txt-color)">{{Créer un post Community}}</span>
+                        </div>
+                    </div>
+                </div>
+            <?php
+            }
+            ?>
         </div>
         <legend><i class="fas fa-table"></i> {{Mes ECU}}</legend>
         <?php
         if (count($eqLogics) == 0) {
-            echo '<br><div class="text-center" style="font-size:1.2em;font-weight:bold;">{{Aucun équipement trouvé, cliquer sur "Ajouter un ECU" pour commencer}}</div>';
+            echo '<br><div class="text-center" style="font-size:1.2em;font-weight:bold;">{{Aucun équipement ECU APSystems trouvé, cliquer sur "Ajouter" pour commencer}}</div>';
         } else {
             echo '<div class="input-group" style="margin:5px;">';
             echo '<input class="form-control roundedLeft" placeholder="{{Rechercher}}" id="in_searchEqlogic">';
@@ -69,7 +61,7 @@ function displayActionCard($action_name, $fa_icon, $action = '', $class = '') {
             echo '<div class="eqLogicThumbnailContainer">';
             foreach ($eqLogics as $eqLogic) {
                 $opacity = ($eqLogic->getIsEnable()) ? '' : 'disableCard';
-                echo '<div class="eqLogicDisplayCard cursor ' . $opacity . '" data-eqlogic-id="' . $eqLogic->getId() . '">';
+                echo '<div class="eqLogicDisplayCard cursor ' . $opacity . '" data-eqLogic_id="' . $eqLogic->getId() . '">';
                 echo '<img src="' . $eqLogic->getImage() . '"/>';
                 echo '<br>';
                 echo '<span class="name">' . $eqLogic->getHumanName(true, true) . '</span>';
@@ -84,8 +76,7 @@ function displayActionCard($action_name, $fa_icon, $action = '', $class = '') {
     </div> <!-- /.eqLogicThumbnailDisplay -->
 
     <!-- Page de présentation de l'équipement -->
-    <div class="col-xs-12 eqLogic" style="display: none;" data-eqlogic-id="">
-        <!-- barre de gestion de l'équipement -->
+    <div class="col-xs-12 eqLogic" style="display: none;">
         <div class="input-group pull-right" style="display:inline-flex;">
             <span class="input-group-btn">
                 <a class="btn btn-sm btn-default eqLogicAction roundedLeft" data-action="configure"><i class="fas fa-cogs"></i><span class="hidden-xs"> {{Configuration avancée}}</span></a>
@@ -94,14 +85,12 @@ function displayActionCard($action_name, $fa_icon, $action = '', $class = '') {
                 <a class="btn btn-sm btn-danger eqLogicAction roundedRight" data-action="remove"><i class="fas fa-minus-circle"></i> {{Supprimer}}</a>
             </span>
         </div>
-        <!-- Onglets -->
         <ul class="nav nav-tabs" role="tablist">
             <li role="presentation"><a href="#" class="eqLogicAction" aria-controls="home" role="tab" data-toggle="tab" data-action="returnToThumbnailDisplay"><i class="fas fa-arrow-circle-left"></i></a></li>
             <li role="presentation" class="active"><a href="#eqlogictab" aria-controls="home" role="tab" data-toggle="tab"><i class="fas fa-tachometer-alt"></i> {{Equipement}}</a></li>
             <li role="presentation"><a href="#commandtab" aria-controls="home" role="tab" data-toggle="tab"><i class="fas fa-list"></i> {{Commandes}}</a></li>
         </ul>
         <div class="tab-content">
-            <!-- Onglet de configuration de l'équipement -->
             <div role="tabpanel" class="tab-pane active" id="eqlogictab">
                 <form class="form-horizontal">
                     <fieldset>
@@ -153,28 +142,13 @@ function displayActionCard($action_name, $fa_icon, $action = '', $class = '') {
                             <div class="form-group">
                                 <label class="col-sm-4 control-label">{{Adresse IP}}</label>
                                 <div class="col-sm-6">
-                                    <input type="text" class="eqLogicAttr form-control" data-l1key="logicalId" readonly/>
+                                    <input type="text" class="eqLogicAttr form-control" data-l1key="logicalId" placeholder="{{Adresse IP de l'ECU}}" readonly />
                                 </div>
                             </div>
                             <div class="form-group">
-                                <label class="col-sm-4 control-label">{{ }}</label>
+                                <label class="col-sm-4 control-label">{{Scan}}</label>
                                 <div class="col-sm-6">
                                     <a class="btn btn-primary" id="scanMicroInverters"><i class="fa fa-search"></i> {{Scan des micro-onduleurs}}</a>
-                                </div>
-                            </div>
-                            <div class="form-group">
-                                <label class="col-sm-4 control-label">{{Auto-actualisation}}
-                                    <sup><i class="fas fa-question-circle tooltips" title="{{Fréquence de rafraîchissement des commandes infos de l'équipement}}"></i></sup>
-                                </label>
-                                <div class="col-sm-6">
-                                    <div class="input-group">
-                                        <input type="text" class="eqLogicAttr form-control roundedLeft" data-l1key="configuration" data-l2key="autorefresh" placeholder="{{Cliquer sur ? pour afficher l'assistant cron}}">
-                                        <span class="input-group-btn">
-                                            <a class="btn btn-default cursor jeeHelper roundedRight" data-helper="cron" title="Assistant cron">
-                                                <i class="fas fa-question-circle"></i>
-                                            </a>
-                                        </span>
-                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -190,7 +164,7 @@ function displayActionCard($action_name, $fa_icon, $action = '', $class = '') {
                         </div>
                     </fieldset>
                 </form>
-            </div><!-- /.tabpanel #eqlogictab-->
+            </div>
 
             <div role="tabpanel" class="tab-pane" id="commandtab">
                 <a class="btn btn-default btn-sm pull-right cmdAction" data-action="add" style="margin-top:5px;"><i class="fas fa-plus-circle"></i> {{Ajouter une commande}}</a>
@@ -211,43 +185,10 @@ function displayActionCard($action_name, $fa_icon, $action = '', $class = '') {
                         </tbody>
                     </table>
                 </div>
-            </div><!-- /.tabpanel #commandtab-->
-        </div><!-- /.tab-content -->
-    </div><!-- /.eqLogic -->
-</div><!-- /.row row-overflow -->
-
-<script>
-    // Action du bouton de scan
-    $('#scanMicroInverters').on('click', function() {
-        // Récupère l'ID depuis l'input caché contenant l'ID de l'équipement
-        var eqLogicId = $('.eqLogicAttr[data-l1key="id"]').val();
-        if (!eqLogicId) {
-            $('#div_alert').showAlert({message: '{{Aucun équipement sélectionné ou ID non trouvé}}', level: 'danger'});
-            return;
-        }
-        console.log('ID de l\'équipement envoyé : ' + eqLogicId); // Débogage dans la console
-        $.ajax({
-            type: 'POST',
-            url: 'plugins/APSystemsSunspec/core/ajax/APSystemsSunspec.ajax.php',
-            data: {
-                action: 'scanMicroInverters',
-                id: eqLogicId
-            },
-            dataType: 'json',
-            error: function(request, status, error) {
-                handleAjaxError(request, status, error);
-            },
-            success: function(data) {
-                if (data.state != 'ok') {
-                    $('#div_alert').showAlert({message: data.result, level: 'danger'});
-                } else {
-                    $('#div_alert').showAlert({message: '{{Scan terminé avec succès}}', level: 'success'});
-                    jeedom.eqLogic.refreshAll();
-                }
-            }
-        });
-    });
-</script>
+            </div>
+        </div>
+    </div>
+</div>
 
 <?php include_file('desktop', 'APSystemsSunspec', 'js', 'APSystemsSunspec'); ?>
 <?php include_file('core', 'plugin.template', 'js'); ?>
