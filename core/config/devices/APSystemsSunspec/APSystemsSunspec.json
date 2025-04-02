@@ -1,0 +1,14 @@
+{
+    "APSystemsSunspec": {
+        "name": "APSystems SunSpec",
+        "configuration": {
+            "ip_address": {
+                "name": "Adresse IP de l'ECU",
+                "type": "input",
+                "mandatory": true,
+                "description": "Entrez l'adresse IP de l'ECU APSystems (ex. 192.168.1.141)"
+            }
+        },
+        "commands": []
+    }
+}
