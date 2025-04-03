@@ -2,10 +2,21 @@
 if (!isConnect('admin')) {
     throw new Exception('{{401 - Accès non autorisé}}');
 }
+// Activer le débogage temporaire
+ini_set('display_errors', 1);
+ini_set('display_startup_errors', 1);
+error_reporting(E_ALL);
+
 // Déclaration des variables obligatoires
 $plugin = plugin::byId('APSystemsSunspec');
 sendVarToJS('eqType', $plugin->getId());
 $eqLogics = eqLogic::byType($plugin->getId());
+
+function displayActionCard($action_name, $fa_icon, $action = '', $class = '') {
+    echo '<div class="eqLogicAction cursor ' . $class . '" data-action="' . $action . '">';
+    echo '<i class="fas ' . $fa_icon . '"></i><br/><span>' . $action_name . '</span>';
+    echo '</div>'."\n";
+}
 ?>
 
 <div class="row row-overflow">
@@ -15,64 +26,58 @@ $eqLogics = eqLogic::byType($plugin->getId());
             <div class="col-sm-10">
                 <legend><i class="fas fa-cog"></i> {{Gestion}}</legend>
                 <div class="eqLogicThumbnailContainer">
-                    <div class="cursor eqLogicAction logoPrimary" data-action="add">
-                        <i class="fas fa-plus-circle"></i>
-                        <br>
-                        <span>{{Ajouter}}</span>
-                    </div>
-                    <div class="cursor eqLogicAction logoSecondary" data-action="gotoPluginConf">
-                        <i class="fas fa-wrench"></i>
-                        <br>
-                        <span>{{Configuration}}</span>
-                    </div>
-                </div>
-            </div>
-            <?php
-            $jeedomVersion = jeedom::version() ?? '0';
-            $displayInfoValue = version_compare($jeedomVersion, '4.4.0', '>=');
-            if ($displayInfoValue) {
-            ?>
-                <div class="col-sm-2">
-                    <legend><i class="fas fa-comments"></i> {{Community}}</legend>
-                    <div class="eqLogicThumbnailContainer">
-                        <div class="cursor eqLogicAction logoSecondary" data-action="createCommunityPost">
-                            <i class="fas fa-ambulance"></i>
-                            <br>
-                            <span style="color:var(--txt-color)">{{Créer un post Community}}</span>
+                    <?php
+                    displayActionCard('{{Ajouter un onduleur}}', 'fa-plus-circle', 'addAPSystemsSunspecEq', 'logoSecondary');
+                    displayActionCard('{{Configuration}}', 'fa-wrench', 'gotoPluginConf', 'logoSecondary');
+                    ?>
+                    <?php
+                    // À conserver pour la compatibilité 4.4+
+                    $jeedomVersion = jeedom::version() ?? '0';
+                    $displayInfoValue = version_compare($jeedomVersion, '4.4.0', '>=');
+                    if ($displayInfoValue) {
+                        ?>
+                        <div class="col-sm-2">
+                            <div class="eqLogicThumbnailContainer">
+                                <div class="cursor eqLogicAction logoSecondary warning" data-action="createCommunityPost">
+                                    <i class="fas fa-ambulance"></i>
+                                    <br>
+                                    <span class="warning">{{Créer un post Community}}</span>
+                                </div>
+                            </div>
                         </div>
-                    </div>
+                    <?php
+                    }
+                    ?>
                 </div>
-            <?php
-            }
-            ?>
+                <legend><i class="fas fa-table"></i> {{Mes ECU}}</legend>
+                <?php
+                if (count($eqLogics) == 0) {
+                    echo '<br><div class="text-center" style="font-size:1.2em;font-weight:bold;">{{Aucun équipement ECU APSystems trouvé, cliquer sur "Ajouter" pour commencer}}</div>';
+                } else {
+                    echo '<div class="input-group" style="margin:5px;">';
+                    echo '<input class="form-control roundedLeft" placeholder="{{Rechercher}}" id="in_searchEqlogic">';
+                    echo '<div class="input-group-btn">';
+                    echo '<a id="bt_resetSearch" class="btn" style="width:30px"><i class="fas fa-times"></i></a>';
+                    echo '<a class="btn roundedRight hidden" id="bt_pluginDisplayAsTable" data-coreSupport="1" data-state="0"><i class="fas fa-grip-lines"></i></a>';
+                    echo '</div>';
+                    echo '</div>';
+                    echo '<div class="eqLogicThumbnailContainer">';
+                    foreach ($eqLogics as $eqLogic) {
+                        $opacity = ($eqLogic->getIsEnable()) ? '' : 'disableCard';
+                        echo '<div class="eqLogicDisplayCard cursor ' . $opacity . '" data-eqLogic_id="' . $eqLogic->getId() . '">';
+                        echo '<img src="' . $eqLogic->getImage() . '"/>';
+                        echo '<br>';
+                        echo '<span class="name">' . $eqLogic->getHumanName(true, true) . '</span>';
+                        echo '<span class="hiddenAsCard displayTableRight hidden">';
+                        echo ($eqLogic->getIsVisible() == 1) ? '<i class="fas fa-eye" title="{{Equipement visible}}"></i>' : '<i class="fas fa-eye-slash" title="{{Equipement non visible}}"></i>';
+                        echo '</span>';
+                        echo '</div>';
+                    }
+                    echo '</div>';
+                }
+                ?>
+            </div>
         </div>
-        <legend><i class="fas fa-table"></i> {{Mes ECU}}</legend>
-        <?php
-        if (count($eqLogics) == 0) {
-            echo '<br><div class="text-center" style="font-size:1.2em;font-weight:bold;">{{Aucun équipement ECU APSystems trouvé, cliquer sur "Ajouter" pour commencer}}</div>';
-        } else {
-            echo '<div class="input-group" style="margin:5px;">';
-            echo '<input class="form-control roundedLeft" placeholder="{{Rechercher}}" id="in_searchEqlogic">';
-            echo '<div class="input-group-btn">';
-            echo '<a id="bt_resetSearch" class="btn" style="width:30px"><i class="fas fa-times"></i></a>';
-            echo '<a class="btn roundedRight hidden" id="bt_pluginDisplayAsTable" data-coreSupport="1" data-state="0"><i class="fas fa-grip-lines"></i></a>';
-            echo '</div>';
-            echo '</div>';
-            echo '<div class="eqLogicThumbnailContainer">';
-            foreach ($eqLogics as $eqLogic) {
-                $opacity = ($eqLogic->getIsEnable()) ? '' : 'disableCard';
-                echo '<div class="eqLogicDisplayCard cursor ' . $opacity . '" data-eqLogic_id="' . $eqLogic->getId() . '">';
-                echo '<img src="' . $eqLogic->getImage() . '"/>';
-                echo '<br>';
-                echo '<span class="name">' . $eqLogic->getHumanName(true, true) . '</span>';
-                echo '<span class="hiddenAsCard displayTableRight hidden">';
-                echo ($eqLogic->getIsVisible() == 1) ? '<i class="fas fa-eye" title="{{Equipement visible}}"></i>' : '<i class="fas fa-eye-slash" title="{{Equipement non visible}}"></i>';
-                echo '</span>';
-                echo '</div>';
-            }
-            echo '</div>';
-        }
-        ?>
     </div> <!-- /.eqLogicThumbnailDisplay -->
 
     <!-- Page de présentation de l'équipement -->
@@ -145,11 +150,29 @@ $eqLogics = eqLogic::byType($plugin->getId());
                                     <input type="text" class="eqLogicAttr form-control" data-l1key="logicalId" placeholder="{{Adresse IP de l'ECU}}" readonly />
                                 </div>
                             </div>
-                            <div class="form-group">
-                                <label class="col-sm-4 control-label">{{Scan}}</label>
+                            <div class="form-group timeout-container">
+                                <label class="col-sm-4 control-label">{{Timeout}}
+                                    <sup><i class="fas fa-question-circle tooltips" title="{{A ajuster si vous avez des soucis de connexion}}"></i></sup>
+                                </label>
                                 <div class="col-sm-6">
-                                    <a class="btn btn-primary" id="scanMicroInverters"><i class="fa fa-search"></i> {{Scan des micro-onduleurs}}</a>
+                                    <input type="number" class="eqLogicAttr form-control" data-l1key="configuration" data-l2key="timeout" placeholder="3" min="1" max="30" />
                                 </div>
+                            </div>
+                            <div class="form-group">
+								<div class="form-group scan-button-container">
+									<label class="col-sm-4 control-label">{{Scan pour ajouter les MO de l'ECU}}</label>
+									<div class="col-sm-6">
+										<a class="btn btn-primary scan-button" id="scanMicroInverters"><i class="fa fa-search"></i> {{Scan des micro-onduleurs}}</a>
+									</div>
+								</div>
+                            </div>
+                            <div class="form-group">
+								<div class="form-group refresh-tout-container">
+									<label class="col-sm-4 control-label">{{MAJ toutes les données ECU}}</label>
+									<div class="col-sm-6">
+										<a class="btn btn-warning refresh-tout-button" id="refreshToutECU"><i class="fas fa-cogs"></i> {{Refresh tout de l'ECU}}</a>
+									</div>
+								</div>
                             </div>
                         </div>
 
@@ -173,12 +196,14 @@ $eqLogics = eqLogic::byType($plugin->getId());
                     <table id="table_cmd" class="table table-bordered table-condensed">
                         <thead>
                             <tr>
-                                <th class="hidden-xs" style="min-width:50px;width:70px;">ID</th>
-                                <th style="min-width:200px;width:350px;">{{Nom}}</th>
-                                <th>{{Type}}</th>
-                                <th style="min-width:260px;">{{Options}}</th>
-                                <th>{{Etat}}</th>
-                                <th style="min-width:80px;width:200px;">{{Actions}}</th>
+							<th class="hidden-xs" style="min-width:50px;width:70px;">ID</th>
+								<th style="min-width:200px;width:350px;">{{Nom}}</th>
+								<th>{{Type}}</th>
+								<th>{{Registre (en décimal)}}</th>
+								<th>{{Registre (en héxadécimal)}}</th>
+								<th style="min-width:260px;">{{Options}}</th>
+								<th>{{Etat}}</th>
+								<th style="min-width:80px;width:200px;">{{Actions}}</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -190,5 +215,7 @@ $eqLogics = eqLogic::byType($plugin->getId());
     </div>
 </div>
 
-<?php include_file('desktop', 'APSystemsSunspec', 'js', 'APSystemsSunspec'); ?>
-<?php include_file('core', 'plugin.template', 'js'); ?>
+<?php
+include_file('desktop', 'APSystemsSunspec', 'js', 'APSystemsSunspec');
+include_file('core', 'plugin.template', 'js');
+?>

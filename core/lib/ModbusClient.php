@@ -7,35 +7,31 @@ class ModbusClient {
     private $timeout;
     private $transactionId = 0;
 
-    /**
-     * Constructeur de la classe ModbusClient
-     * @param string $ip Adresse IP de l'équipement
-     * @param int $port Port TCP (par défaut 502)
-     * @param int $timeout Délai d'attente en secondes (par défaut 5)
-     */
-    public function __construct($ip, $port = 502, $timeout = 5) {
+    public function __construct($ip, $port = 502, $timeout = 15) {
         $this->ip = $ip;
         $this->port = $port;
         $this->timeout = $timeout;
         $this->connect();
     }
 
-    /**
-     * Établit la connexion au serveur Modbus
-     * @throws Exception si la connexion échoue
-     */
     private function connect() {
+        if (class_exists('log')) {
+            log::add('APSystemsSunspec', 'debug', "Tentative de connexion à $this->ip:$this->port (timeout: $this->timeout s)");
+        }
         $this->socket = @fsockopen($this->ip, $this->port, $errno, $errstr, $this->timeout);
         if ($this->socket === false) {
+            if (class_exists('log')) {
+                log::add('APSystemsSunspec', 'error', "Échec de connexion à $this->ip:$this->port - $errstr ($errno)");
+            }
             throw new Exception("Impossible de se connecter à $this->ip:$this->port - $errstr ($errno)");
         }
         stream_set_timeout($this->socket, $this->timeout);
+        stream_set_blocking($this->socket, 1);
+        if (class_exists('log')) {
+            log::add('APSystemsSunspec', 'debug', "Connexion établie à $this->ip:$this->port");
+        }
     }
 
-    /**
-     * Définit l'ID de l'esclave (unité Modbus)
-     * @param int $slaveId ID de l'esclave (1-247)
-     */
     public function setSlave($slaveId) {
         if ($slaveId < 1 || $slaveId > 247) {
             throw new Exception("ID esclave invalide : $slaveId (doit être entre 1 et 247)");
@@ -43,65 +39,127 @@ class ModbusClient {
         $this->slaveId = $slaveId;
     }
 
-    /**
-     * Lit les registres Holding (fonction Modbus 3)
-     * @param int $startRegister Registre de départ (1-based, ajusté en interne)
-     * @param int $quantity Nombre de registres à lire
-     * @return array|bool Tableau des valeurs ou false en cas d'échec
-     */
     public function readHoldingRegisters($startRegister, $quantity) {
         if (!$this->socket || !$this->slaveId) {
             throw new Exception("Connexion non établie ou ID esclave non défini");
         }
-
         if ($quantity < 1 || $quantity > 125) {
             throw new Exception("Quantité invalide : $quantity (doit être entre 1 et 125)");
         }
 
         $this->transactionId++;
         if ($this->transactionId > 65535) {
-            $this->transactionId = 1; // Réinitialise si dépassement
+            $this->transactionId = 1;
         }
 
-        // MBAP Header (7 octets) + PDU (5 octets)
         $request = pack(
-            'n n n C C n n', // Format : Transaction ID (2), Protocol ID (2), Length (2), Slave ID (1), Function Code (1), Start Register (2), Quantity (2)
-            $this->transactionId, // Transaction ID
-            0,                    // Protocol ID (Modbus TCP = 0)
-            6,                    // Length (Slave ID + Function + Data = 6 octets)
-            $this->slaveId,       // Slave ID
-            3,                    // Function Code (Read Holding Registers)
-            $startRegister - 1,   // Registre de départ (0-based en interne)
-            $quantity             // Nombre de registres
+            'nnnCCnn',
+            $this->transactionId,
+            0,
+            6,
+            $this->slaveId,
+            3,
+            $startRegister,
+            $quantity
         );
 
-        // Envoi de la requête
-        $bytesWritten = fwrite($this->socket, $request);
-        if ($bytesWritten === false || $bytesWritten != strlen($request)) {
-            throw new Exception("Échec de l'envoi de la requête Modbus");
+        if (class_exists('log')) {
+            log::add('APSystemsSunspec', 'debug', "Préparation envoi requête Modbus : " . bin2hex($request));
+        }
+        
+        if (!is_resource($this->socket) || feof($this->socket)) {
+            if (class_exists('log')) {
+                log::add('APSystemsSunspec', 'error', "Socket invalide ou fermé avant envoi");
+            }
+            $this->close();
+            $this->connect();
         }
 
-        // Lecture de la réponse (MBAP Header + PDU)
-        $header = fread($this->socket, 7); // 7 octets pour MBAP
-        if ($header === false || strlen($header) != 7) {
+        $bytesWritten = @fwrite($this->socket, $request);
+        if ($bytesWritten === false || $bytesWritten < strlen($request)) {
+            if (class_exists('log')) {
+                log::add('APSystemsSunspec', 'error', "Échec envoi initial : $bytesWritten octets écrits sur " . strlen($request));
+            }
+            $this->close();
+            $this->connect();
+            $bytesWritten = @fwrite($this->socket, $request);
+            if ($bytesWritten === false || $bytesWritten < strlen($request)) {
+                if (class_exists('log')) {
+                    log::add('APSystemsSunspec', 'error', "Échec persistant : $bytesWritten octets écrits sur " . strlen($request));
+                }
+                throw new Exception("Échec persistant de l'envoi de la requête Modbus");
+            }
+        }
+        if (class_exists('log')) {
+            log::add('APSystemsSunspec', 'debug', "Requête envoyée avec succès : $bytesWritten octets");
+        }
+
+        usleep(1000000); // 1s pour l’ECU
+
+        $totalLength = 7 + (2 + $quantity * 2); // 11 octets pour 1 registre
+        $response = '';
+        $bytesRead = 0;
+        $timeoutSec = 3; // Réduit à 3s pour les IDs non connectés
+        $startTime = time();
+
+        while ($bytesRead < $totalLength && (time() - $startTime) < $timeoutSec) {
+            $chunk = @fread($this->socket, $totalLength);
+            if ($chunk !== false && strlen($chunk) > 0) {
+                $response .= $chunk;
+                $hexResponse = bin2hex($response);
+                $bytesRead = strlen($hexResponse) / 2;
+                if (class_exists('log')) {
+                    log::add('APSystemsSunspec', 'debug', "Chunk brut (hex) : " . bin2hex($chunk));
+                    log::add('APSystemsSunspec', 'debug', "Chunk brut (longueur) : " . strlen($chunk));
+                    log::add('APSystemsSunspec', 'debug', "Réponse cumulée : " . $hexResponse);
+                    log::add('APSystemsSunspec', 'debug', "Longueur hex brute : " . strlen($hexResponse));
+                    log::add('APSystemsSunspec', 'debug', "Longueur calculée : " . $bytesRead . " / $totalLength");
+                }
+            }
+            usleep(200000); // 200ms entre lectures
+        }
+
+        if ($bytesRead < 7) {
+            if (class_exists('log')) {
+                log::add('APSystemsSunspec', 'info', "Aucun équipement détecté pour ID $this->slaveId : timeout ou pas de réponse");
+            }
             throw new Exception("Échec de la lecture de l'en-tête de la réponse");
         }
 
-        $headerData = unpack('ntransId/nproto/nlength/Cslave', $header);
-        $dataLength = $headerData['length'] - 2; // Retire Slave ID et Function Code
-        $response = fread($this->socket, 2 + $dataLength);
+        $header = substr($response, 0, 7);
+        if (class_exists('log')) {
+            log::add('APSystemsSunspec', 'debug', "En-tête reçu : " . bin2hex($header));
+        }
 
-        if ($response === false || strlen($response) != (2 + $dataLength)) {
+        $headerData = unpack('ntransId/nproto/nlength/Cslave', $header);
+        $dataLength = $headerData['length'] - 1; // 5 - 1 = 4
+        $expectedTotal = 7 + $dataLength; // 7 + 4 = 11
+
+        if ($bytesRead < $expectedTotal) {
+            if (class_exists('log')) {
+                log::add('APSystemsSunspec', 'error', "Réponse incomplète : $bytesRead octets sur $expectedTotal, contenu : " . bin2hex($response));
+            }
             throw new Exception("Réponse Modbus incomplète ou invalide");
         }
 
-        $responseData = unpack('Cslave/Cfunc/CbyteCount/n*values', $response);
-        if ($responseData['func'] == 0x83) { // Code d'erreur (Function Code + 0x80)
-            $errorCode = unpack('Cerror', substr($response, 2, 1))['error'];
+        $data = substr($response, 7);
+        if (class_exists('log')) {
+            log::add('APSystemsSunspec', 'debug', "Données reçues : " . bin2hex($data));
+        }
+
+        $responseData = unpack('Cfunc/CbyteCount/n*values', $data);
+        if (class_exists('log')) {
+            log::add('APSystemsSunspec', 'debug', "responseData : " . print_r($responseData, true));
+        }
+        if ($responseData['func'] == 0x83) {
+            $errorCode = unpack('Cerror', substr($data, 1, 1))['error'];
             throw new Exception("Erreur Modbus : Code $errorCode");
         }
 
         if ($responseData['func'] != 3 || $responseData['byteCount'] != $quantity * 2) {
+            if (class_exists('log')) {
+                log::add('APSystemsSunspec', 'debug', "Erreur détail : func={$responseData['func']}, byteCount={$responseData['byteCount']}, attendu 3 et " . ($quantity * 2));
+            }
             throw new Exception("Réponse invalide : fonction ou taille des données incorrecte");
         }
 
@@ -112,76 +170,74 @@ class ModbusClient {
         return $values;
     }
 
-    /**
-     * Écrit une valeur dans un registre Holding (fonction Modbus 6)
-     * @param int $register Registre à écrire (1-based, ajusté en interne)
-     * @param int $value Valeur à écrire (0-65535)
-     * @return bool Succès ou échec de l'écriture
-     */
     public function writeSingleRegister($register, $value) {
         if (!$this->socket || !$this->slaveId) {
             throw new Exception("Connexion non établie ou ID esclave non défini");
         }
-
         if ($value < 0 || $value > 65535) {
             throw new Exception("Valeur invalide : $value (doit être entre 0 et 65535)");
         }
 
         $this->transactionId++;
         if ($this->transactionId > 65535) {
-            $this->transactionId = 1; // Réinitialise si dépassement
+            $this->transactionId = 1;
         }
 
-        // MBAP Header (7 octets) + PDU (5 octets)
         $request = pack(
-            'n n n C C n n', // Format : Transaction ID (2), Protocol ID (2), Length (2), Slave ID (1), Function Code (1), Register (2), Value (2)
-            $this->transactionId, // Transaction ID
-            0,                    // Protocol ID (Modbus TCP = 0)
-            6,                    // Length (Slave ID + Function + Data = 6 octets)
-            $this->slaveId,       // Slave ID
-            6,                    // Function Code (Write Single Register)
-            $register - 1,        // Registre (0-based en interne)
-            $value                // Valeur à écrire
+            'nnnCCnn',
+            $this->transactionId,
+            0,
+            6,
+            $this->slaveId,
+            6,
+            $register,
+            $value
         );
 
-        // Envoi de la requête
-        $bytesWritten = fwrite($this->socket, $request);
-        if ($bytesWritten === false || $bytesWritten != strlen($request)) {
-            throw new Exception("Échec de l'envoi de la requête Modbus");
+        if (class_exists('log')) {
+            log::add('APSystemsSunspec', 'debug', "Envoi écriture : " . bin2hex($request));
+        }
+        $bytesWritten = @fwrite($this->socket, $request);
+        if ($bytesWritten === false || $bytesWritten < strlen($request)) {
+            if (class_exists('log')) {
+                log::add('APSystemsSunspec', 'error', "Échec envoi écriture : $bytesWritten octets écrits sur " . strlen($request));
+            }
+            $this->close();
+            $this->connect();
+            $bytesWritten = @fwrite($this->socket, $request);
+            if ($bytesWritten === false || $bytesWritten < strlen($request)) {
+                throw new Exception("Échec persistant de l'envoi de la requête Modbus");
+            }
         }
 
-        // Lecture de la réponse (MBAP Header + PDU = 12 octets)
-        $response = fread($this->socket, 12);
+        $response = @fread($this->socket, 12);
         if ($response === false || strlen($response) != 12) {
             throw new Exception("Réponse Modbus incomplète ou invalide");
         }
 
         $responseData = unpack('ntransId/nproto/nlength/Cslave/Cfunc/nregister/nvalue', $response);
-        if ($responseData['func'] == 0x86) { // Code d'erreur (Function Code + 0x80)
+        if ($responseData['func'] == 0x86) {
             $errorCode = unpack('Cerror', substr($response, 8, 1))['error'];
             throw new Exception("Erreur Modbus : Code $errorCode");
         }
 
-        if ($responseData['func'] != 6 || $responseData['register'] != ($register - 1) || $responseData['value'] != $value) {
+        if ($responseData['func'] != 6 || $responseData['register'] != $register || $responseData['value'] != $value) {
             throw new Exception("Réponse invalide : écriture non confirmée");
         }
 
         return true;
     }
 
-    /**
-     * Ferme la connexion au serveur Modbus
-     */
     public function close() {
-        if ($this->socket) {
+        if ($this->socket && is_resource($this->socket)) {
             fclose($this->socket);
             $this->socket = null;
+            if (class_exists('log')) {
+                log::add('APSystemsSunspec', 'debug', "Connexion fermée à $this->ip:$this->port");
+            }
         }
     }
 
-    /**
-     * Destructeur pour fermer la connexion proprement
-     */
     public function __destruct() {
         $this->close();
     }

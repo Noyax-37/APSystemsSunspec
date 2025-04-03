@@ -9,6 +9,7 @@ try {
 
     if (init('action') == 'scanMicroInverters') {
         $eqLogicId = init('id');
+        $objectId
         log::add('APSystemsSunspec', 'debug', 'ID reçu pour scan : ' . ($eqLogicId ? $eqLogicId : 'null'));
         if (!$eqLogicId) {
             throw new Exception(__('ID de l\'équipement non fourni', __FILE__));
@@ -17,7 +18,21 @@ try {
         if (!is_object($eqLogic)) {
             throw new Exception(__('EqLogic inconnu. Vérifier l\'ID : ', __FILE__) . $eqLogicId);
         }
-        $eqLogic->scanMicroInverters();
+        $eqLogic->scanMicroInverters($objectId);
+        ajax::success();
+    }
+
+    if (init('action') == 'refreshTout') {
+        $eqLogicId = init('id');
+        log::add('APSystemsSunspec', 'debug', 'ID reçu pour données : ' . ($eqLogicId ? $eqLogicId : 'null'));
+        if (!$eqLogicId) {
+            throw new Exception(__('ID de l\'équipement non fourni', __FILE__));
+        }
+        $eqLogic = eqLogic::byId($eqLogicId);
+        if (!is_object($eqLogic)) {
+            throw new Exception(__('EqLogic inconnu. Vérifier l\'ID : ', __FILE__) . $eqLogicId);
+        }
+        $eqLogic->getECUData();
         ajax::success();
     }
 
