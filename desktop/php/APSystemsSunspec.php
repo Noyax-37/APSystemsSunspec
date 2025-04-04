@@ -174,6 +174,14 @@ function displayActionCard($action_name, $fa_icon, $action = '', $class = '') {
 									</div>
 								</div>
                             </div>
+							<div class="form-group">
+								<div class="col-sm-4">
+									<span></span>
+								</div>
+                                <div class="col-sm-8">
+								    <a class="btn btn-warning raz_configInverter" data-choix="raz_configInverter"><i class="fas fa-cogs"></i> {{Rechargement des paramètres du MO (modification, suppression, ...)}}</a>
+							    </div>
+                            </div>
                         </div>
 
                         <div class="col-lg-6">
