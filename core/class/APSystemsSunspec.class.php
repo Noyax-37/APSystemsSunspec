@@ -10,7 +10,6 @@ class APSystemsSunspec extends eqLogic {
     }
 
     public function postSave() {
-        $this->checkAndCreateCommands();
         log::add('APSystemsSunspec', 'debug', 'Équipement sauvegardé avec ID : ' . $this->getId());
     }
 
@@ -56,7 +55,7 @@ class APSystemsSunspec extends eqLogic {
         $this->save();
     }
 
-    public function createCommand($logicalId, $name, $type, $subType, $unit = '', $registre = 0, $calcul = '', $size = 1, $order = 1, $coef = 1, $isVisible = 1) {
+    public function createCommand($logicalId, $name, $type, $subType, $unit = '', $registre = 0, $calcul = '', $size = 1, $order = 1, $coef = 0, $isVisible = 1) {
         $cmd = $this->getCmd(null, $logicalId);
         if (!is_object($cmd)) {
             $cmd = new APSystemsSunspecCmd();
@@ -78,7 +77,73 @@ class APSystemsSunspec extends eqLogic {
         $cmd->save();
     }
 
+    private function calculateInt16($val = 0) {
+        if ($val > 32767) {
+            return ($val - 65536);
+        }
+        return $val;
+    }
+
+    public function majCoef() {
+        $ip = $this->getConfiguration('ip');
+        $timeout = $this->getConfiguration('timeout', 3);
+        $modbusId = $this->getConfiguration('modbus_id', 1);
+        try {
+            $client = new ModbusClient($ip, 502, $timeout);
+            $client->setSlave($modbusId);
+
+            // Lire les coefficients
+            $coefA = calculateInt16(($this->$client->readHoldingRegisters(40076, 1)));
+            $coefV = calculateInt16(($this->$client->readHoldingRegisters(40083, 1)));
+            $coefP = calculateInt16(($this->$client->readHoldingRegisters(40085, 1)));
+            $coefF = calculateInt16(($this->$client->readHoldingRegisters(40087, 1)));
+            $coefVA = calculateInt16(($this->$client->readHoldingRegisters(40089, 1)));
+            $coefVAR = calculateInt16(($this->$client->readHoldingRegisters(40091, 1)));
+            $coefPF = calculateInt16(($this->$client->readHoldingRegisters(40093, 1)));
+            $coefE = calculateInt16(($this->$client->readHoldingRegisters(40096, 1)));
+            $coefTemp = calculateInt16(($this->$client->readHoldingRegisters(40107, 1)));
+
+            return array(
+                'coefA' => $coefA[0],
+                'coefV' => $coefV[0],
+                'coefP' => $coefP[0],
+                'coefF' => $coefF[0],
+                'coefVA' => $coefVA[0],
+                'coefVAR' => $coefVAR[0],
+                'coefPF' => $coefPF[0],
+                'coefE' => $coefE[0],
+                'coefTemp' => $coefTemp[0]
+            );
+            log::add()
+        } catch (Exception $e) {
+            log::add('APSystemsSunspec', 'error', "Erreur lors de la lecture des coefficients : " . $e->getMessage());
+        }
+
+    }
+        
+
     public function checkAndCreateCommandsMO($type) {
+        $order2= 500;
+        $this->createCommand('coefA', 'Coefficient Intensité', 'info', 'numeric', '', 40076, 'int16', 1, $order2);
+        $order2++;
+        $this->createCommand('coefV', 'Coefficient Tension', 'info', 'numeric', '', 40083, 'int16', 1, $order2);
+        $order2++;
+        $this->createCommand('coefP', 'Coefficient Puissance', 'info', 'numeric', '', 40085, 'int16', 1, $order2);
+        $order2++;
+        $this->createCommand('coefF', 'Coefficient Fréquence', 'info', 'numeric', '', 40087, 'int16', 1, $order2);
+        $order2++;
+        $this->createCommand('coefVA', 'Coefficient VA', 'info', 'numeric', '', 40089, 'int16', 1, $order2);
+        $order2++;
+        $this->createCommand('coefVAR', 'Coefficient VAR', 'info', 'numeric', '', 40091, 'int16', 1, $order2);
+        $order2++;
+        $this->createCommand('coefPF', 'Coefficient Facteur de Puissance', 'info', 'numeric', '', 40093, 'int16', 1, $order2);
+        $order2++;
+        $this->createCommand('coefE', 'Coefficient Énergie', 'info', 'numeric', '', 40096, 'int16', 1, $order2);
+        $order2++;
+        $this->createCommand('coefTemp', 'Coefficient Température', 'info', 'numeric', '', 40107, 'int16', 1, $order2);
+
+        $coef = $this->majCoef();
+
         $order = 1;
         $this->createCommand('ID', 'id', 'info', 'numeric', '', 40002, 'uint16', 1, $order);
         $order++;
@@ -98,43 +163,43 @@ class APSystemsSunspec extends eqLogic {
         $order++;
         $this->createCommand('nb_reg_ph', 'Nombre de registres', 'info', 'numeric', '', 40071, 'uint16', 1, $order);
         $order++;
-        $this->createCommand('amps', 'Courant', 'info', 'numeric', 'A', 40072, 'uint16', 1, $order);
+        $this->createCommand('amps', 'Courant', 'info', 'numeric', 'A', 40072, 'uint16', 1, $order, $coef['coefA']);
         $order++;
         if ($type == 'triphasé') {
-            $this->createCommand('ampsph1', 'Courant phase 1', 'info', 'numeric', 'A', 40073, 'uint16', 1, $order);
+            $this->createCommand('ampsph1', 'Courant phase 1', 'info', 'numeric', 'A', 40073, 'uint16', 1, $order, $coef['coefA']);
             $order++;
-            $this->createCommand('ampsph2', 'Courant phase 2', 'info', 'numeric', 'A', 40074, 'uint16', 1, $order);
+            $this->createCommand('ampsph2', 'Courant phase 2', 'info', 'numeric', 'A', 40074, 'uint16', 1, $order, $coef['coefA']);
             $order++;
-            $this->createCommand('ampsph3', 'Courant phase 3', 'info', 'numeric', 'A', 40075, 'uint16', 1, $order);
+            $this->createCommand('ampsph3', 'Courant phase 3', 'info', 'numeric', 'A', 40075, 'uint16', 1, $order, $coef['coefA']);
             $order++;
-            $this->createCommand('vph1ph2', 'Tension ph1/ph2', 'info', 'numeric', 'V', 40077, 'uint16', 1, $order);
+            $this->createCommand('vph1ph2', 'Tension ph1/ph2', 'info', 'numeric', 'V', 40077, 'uint16', 1, $order, $coef['coefV']);
             $order++;
-            $this->createCommand('vph2ph3', 'Tension ph2/ph3', 'info', 'numeric', 'V', 40078, 'uint16', 1, $order);
+            $this->createCommand('vph2ph3', 'Tension ph2/ph3', 'info', 'numeric', 'V', 40078, 'uint16', 1, $order, $coef['coefV']);
             $order++;
-            $this->createCommand('vph3ph1', 'Tension ph3/ph1', 'info', 'numeric', 'V', 40079, 'uint16', 1, $order);
+            $this->createCommand('vph3ph1', 'Tension ph3/ph1', 'info', 'numeric', 'V', 40079, 'uint16', 1, $order, $coef['coefV']);
             $order++;
         }
-        $this->createCommand('vph1', 'Tension ph1', 'info', 'numeric', 'V', 40080, 'uint16', 1, $order);
+        $this->createCommand('vph1', 'Tension ph1', 'info', 'numeric', 'V', 40080, 'uint16', 1, $order, $coef['coefV']);
         $order++;
         if ($type == 'triphasé') {
-            $this->createCommand('vph2', 'Tension ph2', 'info', 'numeric', 'V', 40081, 'uint16', 1, $order);
+            $this->createCommand('vph2', 'Tension ph2', 'info', 'numeric', 'V', 40081, 'uint16', 1, $order, $coef['coefV']);
             $order++;
-            $this->createCommand('vph3', 'Tension ph3', 'info', 'numeric', 'V', 40082, 'uint16', 1, $order);
+            $this->createCommand('vph3', 'Tension ph3', 'info', 'numeric', 'V', 40082, 'uint16', 1, $order, $coef['coefV']);
             $order++;
         }
-        $this->createCommand('power', 'Puissance', 'info', 'numeric', 'W', 40084, 'int16', 1, $order);
+        $this->createCommand('power', 'Puissance', 'info', 'numeric', 'W', 40084, 'int16', 1, $order, $coef['coefP']);
         $order++;
-        $this->createCommand('frequency', 'Fréquence', 'info', 'numeric', 'Hz', 40086, 'int16', 1, $order);
+        $this->createCommand('frequency', 'Fréquence', 'info', 'numeric', 'Hz', 40086, 'int16', 1, $order, $coef['coefF']);
         $order++;
-        $this->createCommand('va', 'Puissance apparente', 'info', 'numeric', 'VA', 40088, 'int16', 1, $order);
+        $this->createCommand('va', 'Puissance apparente', 'info', 'numeric', 'VA', 40088, 'int16', 1, $order, $coef['coefVA']);
         $order++;
-        $this->createCommand('var', 'Puissance réactive', 'info', 'numeric', 'VAR', 40090, 'int16', 1, $order);
+        $this->createCommand('var', 'Puissance réactive', 'info', 'numeric', 'VAR', 40090, 'int16', 1, $order, $coef['coefVAR']);
         $order++;
-        $this->createCommand('power_factor', 'Facteur de puissance', 'info', 'numeric', '', 40092, 'int16', 1, $order);
+        $this->createCommand('power_factor', 'Facteur de puissance', 'info', 'numeric', '', 40092, 'int16', 1, $order, $coef['coefPF']);
         $order++;
-        $this->createCommand('energy', 'Énergie', 'info', 'numeric', 'Wh', 40094, 'acc32', 2, $order);
+        $this->createCommand('energy', 'Énergie', 'info', 'numeric', 'Wh', 40094, 'acc32', 2, $order, $coef['coefE']);
         $order++;
-        $this->createCommand('cabinet_temp', 'Température du boîtier', 'info', 'numeric', '°C', 40103, 'int16', 1, $order);
+        $this->createCommand('cabinet_temp', 'Température du boîtier', 'info', 'numeric', '°C', 40103, 'int16', 1, $order, $coef['coefTemp']);
         $order++;
         $this->createCommand('operating_state', 'État de fonctionnement', 'info', 'string', '', 40104, 'enum16', 1, $order);
         $order++;
@@ -181,23 +246,6 @@ class APSystemsSunspec extends eqLogic {
         $this->createCommand('energy_float', 'Énergie float', 'info', 'numeric', 'Wh', 40154, 'float32', 2, $order);
         $order++;
         $this->createCommand('cabinet_temp_float', 'Température du boîtier float', 'info', 'numeric', '°C', 40156, 'float32', 2, $order);
-
-        $order+= 100;
-        $this->createCommand('coefA', 'Coefficient Intensité', 'info', 'numeric', '', 40076, 'uint16', 1, $order);
-        $order++;
-        $this->createCommand('coefV', 'Coefficient Tension', 'info', 'numeric', '', 40083, 'uint16', 1, $order);
-        $order++;
-        $this->createCommand('coefP', 'Coefficient Puissance', 'info', 'numeric', '', 40085, 'uint16', 1, $order);
-        $order++;
-        $this->createCommand('coefF', 'Coefficient Fréquence', 'info', 'numeric', '', 40087, 'uint16', 1, $order);
-        $order++;
-        $this->createCommand('coefVA', 'Coefficient VA', 'info', 'numeric', '', 40089, 'uint16', 1, $order);
-        $order++;
-        $this->createCommand('coefVAR', 'Coefficient VAR', 'info', 'numeric', '', 40091, 'uint16', 1, $order);
-        $order++;
-        $this->createCommand('coefPF', 'Coefficient Facteur de Puissance', 'info', 'numeric', '', 40093, 'uint16', 1, $order);
-        $order++;
-        $this->createCommand('coefE', 'Coefficient Énergie', 'info', 'numeric', '', 40095, 'uint16', 1, $order);
     }
 
     public function refreshData() {
@@ -376,7 +424,8 @@ class APSystemsSunspec extends eqLogic {
             $registre = $cmd->getConfiguration('registre', 0);
             $size = $cmd->getConfiguration('size', 1);
             $calcul = $cmd->getConfiguration('calcul', '');
-            $coef = $cmd->getConfiguration('coef', 1); // Récupérer le coefficient, 1 par défaut
+            $coefbrut = $cmd->getConfiguration('coef', 0); // Récupérer le coefficient, 0 par défaut
+            $coef = 10^$coefbrut; // Appliquer la puissance de 10 
 
             // Vérifier si le registre est dans la plage lue (40002 à 40157)
             if ($registre < 40002 || $registre + $size - 1 > 40157) {
