@@ -158,6 +158,22 @@ function displayActionCard($action_name, $fa_icon, $action = '', $class = '') {
                                     <input type="number" class="eqLogicAttr form-control" data-l1key="configuration" data-l2key="timeout" placeholder="3" min="1" max="30" />
                                 </div>
                             </div>
+							<div class="form-group autoRefresh-container">
+								<label class="col-sm-4 control-label">{{Auto-actualisation}}
+									<sup><i class="fas fa-question-circle tooltips" title="{{Fréquence de rafraîchissement des commandes infos des MO}}"></i></sup>
+								</label>
+                                <div class="col-sm-6">
+                                    <div class="input-group">
+                                        <input type="text" class="eqLogicAttr form-control roundedLeft" data-l1key="configuration" data-l2key="autorefresh" placeholder="{{Cliquer sur ? pour afficher l'assistant cron}}">
+                                        <span class="input-group-btn">
+                                            <a class="btn btn-default cursor jeeHelper roundedRight" data-helper="cron" title="Assistant cron">
+                                                <i class="fas fa-question-circle"></i>
+                                            </a>
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
+
                             <div class="form-group">
 								<div class="form-group scan-button-container">
 									<label class="col-sm-4 control-label">{{Scan pour ajouter les MO de l'ECU}}</label>
@@ -173,14 +189,6 @@ function displayActionCard($action_name, $fa_icon, $action = '', $class = '') {
 										<a class="btn btn-warning refresh-tout-button" id="refreshToutECU"><i class="fas fa-cogs"></i> {{Refresh tout de l'ECU}}</a>
 									</div>
 								</div>
-                            </div>
-							<div class="form-group">
-								<div class="col-sm-4">
-									<span></span>
-								</div>
-                                <div class="col-sm-8">
-								    <a class="btn btn-warning raz_configInverter" data-choix="raz_configInverter"><i class="fas fa-cogs"></i> {{Rechargement des paramètres du MO (modification, suppression, ...)}}</a>
-							    </div>
                             </div>
                         </div>
 

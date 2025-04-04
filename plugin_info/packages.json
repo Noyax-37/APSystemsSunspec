@@ -4,7 +4,6 @@
   "apt": {
   },
   "pip3": {
-    "pymodbus" : {"reinstall" : true}
   },
   "npm": {
   },

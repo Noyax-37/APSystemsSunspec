@@ -27,4 +27,15 @@ function APSystemsSunspec_update() {
 
 // Fonction exécutée automatiquement après la suppression du plugin
 function APSystemsSunspec_remove() {
+    $eqLogicList = eqLogic::byType('APSystemsSunspec');
+    foreach ($eqLogicList as $eqLogic) {
+        $id= $eqLogic->getId();
+        log::add('APSystemsSunspec', 'debug', 'Suppression de l\'équipement : ' . $eqLogic->getName() . ' (ID : ' . $id . ')');
+        $cron = cron::byClassAndFunction('APSystemsSunspec', 'getCronECUData', $id);
+        if (is_object($cron)) {
+            $cron->remove();
+        }
+            $eqLogic->remove();
+    }
+
 }

@@ -63,10 +63,6 @@ class ModbusClient {
             $quantity
         );
 
-        if (class_exists('log')) {
-            log::add('APSystemsSunspec', 'debug', "Préparation envoi requête Modbus : " . bin2hex($request));
-        }
-        
         if (!is_resource($this->socket) || feof($this->socket)) {
             if (class_exists('log')) {
                 log::add('APSystemsSunspec', 'error', "Socket invalide ou fermé avant envoi");
@@ -90,9 +86,6 @@ class ModbusClient {
                 throw new Exception("Échec persistant de l'envoi de la requête Modbus");
             }
         }
-        if (class_exists('log')) {
-            log::add('APSystemsSunspec', 'debug', "Requête envoyée avec succès : $bytesWritten octets");
-        }
 
         usleep(1000000); // 1s pour l’ECU
 
@@ -108,13 +101,6 @@ class ModbusClient {
                 $response .= $chunk;
                 $hexResponse = bin2hex($response);
                 $bytesRead = strlen($hexResponse) / 2;
-                if (class_exists('log')) {
-                    log::add('APSystemsSunspec', 'debug', "Chunk brut (hex) : " . bin2hex($chunk));
-                    log::add('APSystemsSunspec', 'debug', "Chunk brut (longueur) : " . strlen($chunk));
-                    log::add('APSystemsSunspec', 'debug', "Réponse cumulée : " . $hexResponse);
-                    log::add('APSystemsSunspec', 'debug', "Longueur hex brute : " . strlen($hexResponse));
-                    log::add('APSystemsSunspec', 'debug', "Longueur calculée : " . $bytesRead . " / $totalLength");
-                }
             }
             usleep(200000); // 200ms entre lectures
         }
@@ -127,9 +113,6 @@ class ModbusClient {
         }
 
         $header = substr($response, 0, 7);
-        if (class_exists('log')) {
-            log::add('APSystemsSunspec', 'debug', "En-tête reçu : " . bin2hex($header));
-        }
 
         $headerData = unpack('ntransId/nproto/nlength/Cslave', $header);
         $dataLength = $headerData['length'] - 1; // 5 - 1 = 4
@@ -143,14 +126,8 @@ class ModbusClient {
         }
 
         $data = substr($response, 7);
-        if (class_exists('log')) {
-            log::add('APSystemsSunspec', 'debug', "Données reçues : " . bin2hex($data));
-        }
 
         $responseData = unpack('Cfunc/CbyteCount/n*values', $data);
-        if (class_exists('log')) {
-            log::add('APSystemsSunspec', 'debug', "responseData : " . print_r($responseData, true));
-        }
         if ($responseData['func'] == 0x83) {
             $errorCode = unpack('Cerror', substr($data, 1, 1))['error'];
             throw new Exception("Erreur Modbus : Code $errorCode");
@@ -194,9 +171,6 @@ class ModbusClient {
             $value
         );
 
-        if (class_exists('log')) {
-            log::add('APSystemsSunspec', 'debug', "Envoi écriture : " . bin2hex($request));
-        }
         $bytesWritten = @fwrite($this->socket, $request);
         if ($bytesWritten === false || $bytesWritten < strlen($request)) {
             if (class_exists('log')) {

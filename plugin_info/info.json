@@ -1,7 +1,7 @@
 {
 	"id" : "APSystemsSunspec",
 	"name" : "APSystems Sunspec",
-	"pluginVersion": "0.1",
+	"pluginVersion": "v1.2",
 	"description": {
 		"fr_FR": "Template servant de base à la création de plugins pour Jeedom"
 	},
@@ -9,8 +9,8 @@
 	"author": "Noyax37",
 	"require": "4.2",
 	"category": "energy",
-	"hasDependency": true,
-	"hasOwnDeamon": true,
+	"hasDependency": false,
+	"hasOwnDeamon": false,
 	"maxDependancyInstallTime": 0,
 	"changelog_beta": "https:\/\/doc.jeedom.com\/#language#\/plugins\/programming\/template\/beta\/changelog",
 	"changelog": "https:\/\/doc.jeedom.com\/#language#\/plugins\/programming\/template\/changelog",

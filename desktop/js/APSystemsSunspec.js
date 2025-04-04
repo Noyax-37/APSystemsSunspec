@@ -267,37 +267,6 @@ $(document).ready(function() {
     });
   });
 
-  $('.raz_configInverter').on('click', function () {
-    console.log('Clic sur le bouton de raz config Micro-onduleur');
-    // Récupérer l'ID de l'équipement
-    // Vérifier si l'ID est présent
-    var eqLogicId = $('.eqLogicAttr[data-l1key="id"]').val();
-    if (!eqLogicId) {
-      console.log('Erreur : Aucun ID trouvé');
-      $('#div_alert').showAlert({ message: '{{Aucun équipement sélectionné}}', level: 'danger' });
-      return;
-    }
-    console.log('Envoi AJAX avec ID : ' + eqLogicId);
-    $.ajax({// fonction permettant de faire de l'ajax
-            type: "POST", // methode de transmission des données au fichier php
-            url: 'plugins/APSystemsSunspec/core/ajax/APSystemsSunspec.ajax.php',
-            data: {
-                action: "razConfigInverter",
-                id: eqLogicId
-            },
-            dataType: 'json',
-            error: function (request, status, error) {
-              console.log('Erreur AJAX : ' + error);
-              $('#div_alert').showAlert({ message: error, level: 'danger' });
-            },
-            success: function (data) { // si l'appel a bien fonctionné
-              console.log('Réponse AJAX : ' + JSON.stringify(data));
-              $.fn.showAlert({message: '{{Mise à jour réussie}}', level: 'success'});
-            }
-          });
-      });
-
-
 
   // Fonction pour vérifier et ajuster la visibilité des élémlents
   function checkScanButtonVisibility(logicalId) {
@@ -308,12 +277,14 @@ $(document).ready(function() {
       $('.timeout-container').hide();
       $('.refresh-tout-container').hide();
       $('.raz_configInverter').show();
+      $('.autoRefresh-container').hide();
     } else {
       console.log('Équipement père détecté, affichage des éléments père et masquage des éléments fils');
       $('.scan-button-container').show();
       $('.timeout-container').show();
       $('.refresh-tout-container').show();
       $('.raz_configInverter').hide();
+      $('.autoRefresh-container').show();
     }
   }
 
