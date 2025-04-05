@@ -176,10 +176,11 @@ function displayActionCard($action_name, $fa_icon, $action = '', $class = '') {
 
                             <div class="form-group">
 								<div class="form-group scan-button-container">
-									<label class="col-sm-4 control-label">{{Scan pour ajouter les MO de l'ECU}}</label>
-									<div class="col-sm-6">
+									<label class="col-sm-4 control-label">{{Scan pour ajouter ou mettre à jour les MO de l'ECU}}</label>
+									<div class="col-sm-2">
 										<a class="btn btn-primary scan-button" id="scanMicroInverters"><i class="fa fa-search"></i> {{Scan des micro-onduleurs}}</a>
 									</div>
+                                    <label class="col-sm-6">{{Ne fonctionnera pas si vous êtes dans un MO}}</label>
 								</div>
                             </div>
                             <div class="form-group">

@@ -95,43 +95,130 @@ class APSystemsSunspec extends eqLogic {
     
     public function checkAndCreateCommands() {
         if (strpos($this->getLogicalId(), '_ID') === false) {
-            $powerCmd = $this->getCmd(null, 'power');
-            if (!is_object($powerCmd)) {
-                $powerCmd = new APSystemsSunspecCmd();
-                $powerCmd->setName(__('Puissance totale', __FILE__));
-                $powerCmd->setEqLogic_id($this->getId());
-                $powerCmd->setLogicalId('power');
-                $powerCmd->setType('info');
-                $powerCmd->setSubType('numeric');
-                $powerCmd->setUnite('W');
-                $powerCmd->save();
-            }
-
+            // Commande pour l'état global de l'ECU
             $stateCmd = $this->getCmd(null, 'state');
             if (!is_object($stateCmd)) {
                 $stateCmd = new APSystemsSunspecCmd();
-                $stateCmd->setName(__('État', __FILE__));
-                $stateCmd->setEqLogic_id($this->getId());
-                $stateCmd->setLogicalId('state');
-                $stateCmd->setType('info');
-                $stateCmd->setSubType('binary');
-                $stateCmd->save();
             }
+            $stateCmd->setName(__('État', __FILE__));
+            $stateCmd->setEqLogic_id($this->getId());
+            $stateCmd->setLogicalId('state');
+            $stateCmd->setType('info');
+            $stateCmd->setSubType('binary');
+            $stateCmd->setOrder(1);
+            $stateCmd->save();
 
+            // Commande pour la puissance totale
+            $powerCmd = $this->getCmd(null, 'power');
+            if (!is_object($powerCmd)) {
+                $powerCmd = new APSystemsSunspecCmd();
+            }
+            $powerCmd->setName(__('Puissance totale', __FILE__));
+            $powerCmd->setEqLogic_id($this->getId());
+            $powerCmd->setLogicalId('power');
+            $powerCmd->setType('info');
+            $powerCmd->setSubType('numeric');
+            $powerCmd->setUnite('W');
+            $powerCmd->setOrder(2);
+            $powerCmd->save();
+
+            // Commande pour l'énergie totale
+            $energyCmd = $this->getCmd(null, 'totalEnergy');
+            if (!is_object($energyCmd)) {
+                $energyCmd = new APSystemsSunspecCmd();
+            }
+            $energyCmd->setName(__('Énergie totale', __FILE__));
+            $energyCmd->setEqLogic_id($this->getId());
+            $energyCmd->setLogicalId('totalEnergy');
+            $energyCmd->setType('info');
+            $energyCmd->setSubType('numeric');
+            $energyCmd->setUnite('Wh');
+            $energyCmd->setOrder(3);
+            $energyCmd->save();
+
+            // Commande pour le rafraîchissement manuel
             $refreshCmd = $this->getCmd(null, 'refresh');
             if (!is_object($refreshCmd)) {
                 $refreshCmd = new APSystemsSunspecCmd();
-                $refreshCmd->setName(__('Rafraîchir', __FILE__));
-                $refreshCmd->setEqLogic_id($this->getId());
-                $refreshCmd->setLogicalId('refresh');
-                $refreshCmd->setType('action');
-                $refreshCmd->setSubType('other');
-                $refreshCmd->save();
             }
-            log::add('APSystemsSunspec', 'info', 'Commandes créées pour l\'équipement ID : ' . $this->getId());
+            $refreshCmd->setName(__('Rafraîchir', __FILE__));
+            $refreshCmd->setEqLogic_id($this->getId());
+            $refreshCmd->setLogicalId('refresh');
+            $refreshCmd->setType('action');
+            $refreshCmd->setSubType('other');
+            $refreshCmd->save();
+
+            // Créer les commandes pour chaque micro-onduleur (puissance, énergie, état)
+            $children = eqLogic::byTypeAndSearchConfiguration('APSystemsSunspec', array('parent_id' => $this->getId()));
+            $order = 4; // Commencer après les commandes principales (state, power, totalEnergy)
+
+            foreach ($children as $child) {
+                $modbusId = $child->getConfiguration('modbus_id');
+                if (!is_numeric($modbusId)) {
+                    log::add('APSystemsSunspec', 'error', "ID Modbus invalide pour l'enfant avec logicalId : " . $child->getLogicalId());
+                    continue;
+                }
+
+                // Commande pour la puissance du micro-onduleur
+                $this->createCommand(
+                    "power_mo_$modbusId",
+                    "Puissance MO $modbusId",
+                    'info',
+                    'numeric',
+                    'W',
+                    0, // Pas de registre, car c'est une valeur calculée
+                    '', // Pas de calcul spécifique
+                    1,
+                    $order
+                );
+                $order++;
+
+                // Commande pour l'énergie du micro-onduleur
+                $this->createCommand(
+                    "energy_mo_$modbusId",
+                    "Énergie MO $modbusId",
+                    'info',
+                    'numeric',
+                    'Wh',
+                    0,
+                    '',
+                    1,
+                    $order
+                );
+                $order++;
+
+                // Commande pour l'état du micro-onduleur
+                $this->createCommand(
+                    "state_mo_$modbusId",
+                    "État MO $modbusId",
+                    'info',
+                    'binary',
+                    '',
+                    0,
+                    '',
+                    1,
+                    $order
+                );
+                $order++;
+            }
+
+            log::add('APSystemsSunspec', 'info', 'Commandes créées pour l\'équipement ECU ID : ' . $this->getId());
+        } else {
+            // Si c'est un micro-onduleur
+            // Commande pour l'état
+            $stateCmd = $this->getCmd(null, 'state');
+            if (!is_object($stateCmd)) {
+                $stateCmd = new APSystemsSunspecCmd();
+            }
+            $stateCmd->setName(__('État', __FILE__));
+            $stateCmd->setEqLogic_id($this->getId());
+            $stateCmd->setLogicalId('state');
+            $stateCmd->setType('info');
+            $stateCmd->setSubType('binary');
+            $stateCmd->setOrder(1);
+            $stateCmd->save();
+            log::add('APSystemsSunspec', 'info', 'Commandes créées pour le micro-onduleur ID : ' . $this->getId());
         }
-        // Pas d'appel à $this->save() ici pour éviter une récursion
-        // Pas de $this->setIsEnable(1) ni $this->setIsVisible(1) ici, car cela concerne les enfants
     }
 
     public function createCommand($logicalId, $name, $type, $subType, $unit = '', $registre = 0, $calcul = '', $size = 1, $order = 1, $coef = 0, $isVisible = 1) {
@@ -302,7 +389,7 @@ class APSystemsSunspec extends eqLogic {
         }
         log::add('APSystemsSunspec', 'info', "Coefficients mis à jour : A={$coef['coefA']}, V={$coef['coefV']}, P={$coef['coefP']}, F={$coef['coefF']}, VA={$coef['coefVA']}, VAR={$coef['coefVAR']}, PF={$coef['coefPF']}, E={$coef['coefE']}, Temp={$coef['coefTemp']}");
 
-        $order = 1;
+        $order = 2;
         $this->createCommand('ID', 'id', 'info', 'numeric', '', 40002, 'uint16', 1, $order);
         $order++;
         $this->createCommand('length', 'Model Length', 'info', 'numeric', '', 40003, 'uint16', 2, $order);
@@ -407,38 +494,8 @@ class APSystemsSunspec extends eqLogic {
     }
 
     public function refreshData() {
-        $ip = $this->getLogicalId();
-        $timeout = $this->getConfiguration('timeout', 3);
-        $totalPower = 0;
-        $state = 0;
-
-        $children = eqLogic::byTypeAndSearchConfiguration('APSystemsSunspec', array('parent_id' => $this->getId()));
-        foreach ($children as $child) {
-            $modbusId = $child->getConfiguration('modbus_id');
-            try {
-                $client = new ModbusClient($ip, 502, $timeout);
-                $client->setSlave($modbusId);
-
-                $power = $client->readHoldingRegisters(40144, 2);
-                $powerValue = $this->decodeFloat32($power[0], $power[1]);
-                $child->checkAndUpdateCmd('power_float', $powerValue);
-                $totalPower += $powerValue;
-
-                $child->checkAndUpdateCmd('state', $powerValue > 0 ? 1 : 0);
-
-                log::add('APSystemsSunspec', 'info', "Données rafraîchies pour enfant ID $modbusId : Puissance = $powerValue W");
-            } catch (Exception $e) {
-                log::add('APSystemsSunspec', 'error', "Erreur refresh pour enfant ID $modbusId : " . $e->getMessage());
-            } finally {
-                if (isset($client)) {
-                    $client->close();
-                }
-            }
-        }
-
-        $this->checkAndUpdateCmd('power', $totalPower);
-        $this->checkAndUpdateCmd('state', $totalPower > 0 ? 1 : 0);
-        log::add('APSystemsSunspec', 'info', "Données rafraîchies pour IP : $ip - Puissance totale : $totalPower W");
+        log::add('APSystemsSunspec', 'info', "Rafraîchissement manuel des données pour l'équipement : " . $this->getName() . " (ID : " . $this->getId() . ")");
+        $this->getECUData(); // Réutiliser la logique existante
     }
 
     private function decodeFloat32($high, $low) {
@@ -446,7 +503,8 @@ class APSystemsSunspec extends eqLogic {
         $sign = substr($bin, 0, 1) == '1' ? -1 : 1;
         $exp = bindec(substr($bin, 1, 8)) - 127;
         $mantissa = 1 + bindec(substr($bin, 9)) / pow(2, 23);
-        return $sign * $mantissa * pow(2, $exp);
+        $return = round($sign * $mantissa * pow(2, $exp), 2);
+        return $return;
     }
 
     public function scanMicroInverters($objectId = null) {
@@ -485,7 +543,8 @@ class APSystemsSunspec extends eqLogic {
             }
         }
         log::add('APSystemsSunspec', 'info', "Scan terminé pour IP : $ip");
-        // Pas besoin de $this->save() ici, car l'équipement est déjà sauvegardé dans postSave()
+        // Mettre à jour les commandes de l'ECU parent après le scan
+        $this->checkAndCreateCommands();
     }
 
     private function queryModbus($ip, $modbusId, $register, $timeout) {
@@ -541,6 +600,50 @@ class APSystemsSunspec extends eqLogic {
         }
     }
 
+    // Méthode pour vérifier si l'interrogation est désactivée
+    private function isPollingDisabled() {
+        $startTime = $this->getConfiguration('stopPollingStart', '');
+        $endTime = $this->getConfiguration('stopPollingEnd', '');
+
+        // Si les paramètres ne sont pas définis, l'interrogation n'est pas désactivée
+        if (empty($startTime) || empty($endTime)) {
+            return false;
+        }
+
+        // Vérifier le format des heures (HH:MM)
+        if (!preg_match('/^([01]?[0-9]|2[0-3]):[0-5][0-9]$/', $startTime) ||
+            !preg_match('/^([01]?[0-9]|2[0-3]):[0-5][0-9]$/', $endTime)) {
+            log::add('APSystemsSunspec', 'error', "Format invalide pour stopPollingStart ($startTime) ou stopPollingEnd ($endTime). Utilisez le format HH:MM.");
+            return false;
+        }
+
+        // Obtenir l'heure actuelle
+        $currentTime = new DateTime('now', new DateTimeZone('Europe/Paris')); // Ajustez le fuseau horaire selon vos besoins
+        $currentHourMinute = $currentTime->format('H:i');
+
+        // Convertir les heures en minutes pour une comparaison plus facile
+        $startMinutes = (intval(substr($startTime, 0, 2)) * 60) + intval(substr($startTime, 3, 2));
+        $endMinutes = (intval(substr($endTime, 0, 2)) * 60) + intval(substr($endTime, 3, 2));
+        $currentMinutes = (intval(substr($currentHourMinute, 0, 2)) * 60) + intval(substr($currentHourMinute, 3, 2));
+
+        // Cas où la période d'arrêt chevauche minuit (ex. 22:00 à 06:00)
+        if ($startMinutes > $endMinutes) {
+            // La période d'arrêt va de startTime à minuit, puis de minuit à endTime
+            if ($currentMinutes >= $startMinutes || $currentMinutes <= $endMinutes) {
+                log::add('APSystemsSunspec', 'debug', "Interrogation désactivée : heure actuelle ($currentHourMinute) dans la plage $startTime à $endTime (chevauche minuit).");
+                return true;
+            }
+        } else {
+            // Cas normal (ex. 01:00 à 05:00)
+            if ($currentMinutes >= $startMinutes && $currentMinutes <= $endMinutes) {
+                log::add('APSystemsSunspec', 'debug', "Interrogation désactivée : heure actuelle ($currentHourMinute) dans la plage $startTime à $endTime.");
+                return true;
+            }
+        }
+
+        return false;
+    }
+
     public function getECUData() {
         $ip = $this->getLogicalId();
         $timeout = $this->getConfiguration('timeout', 3);
@@ -550,14 +653,54 @@ class APSystemsSunspec extends eqLogic {
 
         if (empty($children)) {
             log::add('APSystemsSunspec', 'info', "Aucun micro-onduleur trouvé pour l'ECU avec IP : $ip (ID : $parentId)");
+            $this->checkAndUpdateCmd('power', 0);
+            $this->checkAndUpdateCmd('totalEnergy', 0);
+            $this->checkAndUpdateCmd('state', 0);
+            $this->refreshWidget();
+            return false;
+        }
+
+        // Vérifier si l'interrogation est désactivée pour la période actuelle
+        if ($this->isPollingDisabled()) {
+            log::add('APSystemsSunspec', 'info', "Interrogation des micro-onduleurs désactivée pour l'ECU avec IP : $ip (ID : $parentId) pendant la période définie.");
+            
+            // Mettre toutes les commandes à 0 pendant la période d'arrêt
+            $this->checkAndUpdateCmd('power', 0);
+            $this->checkAndUpdateCmd('totalEnergy', 0);
+            $this->checkAndUpdateCmd('state', 0);
+
+            foreach ($children as $child) {
+                $modbusId = $child->getConfiguration('modbus_id');
+                if (!is_numeric($modbusId)) {
+                    log::add('APSystemsSunspec', 'error', "ID Modbus invalide pour l'enfant avec logicalId : " . $child->getLogicalId());
+                    continue;
+                }
+                $child->checkAndUpdateCmd('state', 0);
+                $this->checkAndUpdateCmd("power_mo_$modbusId", 0);
+                $this->checkAndUpdateCmd("energy_mo_$modbusId", 0);
+                $this->checkAndUpdateCmd("state_mo_$modbusId", 0);
+                $child->refreshWidget();
+            }
+
+            $this->refreshWidget();
             return false;
         }
 
         $success = true;
+        $totalPower = 0;
+        $totalEnergy = 0;
+
         foreach ($children as $child) {
             if (!$child->getIsEnable()) {
                 $name = $child->getName();
                 log::add('APSystemsSunspec', 'debug', "Enfant $name (ID : {$child->getId()}) désactivé, ignoré.");
+                $child->checkAndUpdateCmd('state', 0);
+                // Mettre à jour les commandes correspondantes dans l'ECU parent
+                $modbusId = $child->getConfiguration('modbus_id');
+                $this->checkAndUpdateCmd("power_mo_$modbusId", 0);
+                $this->checkAndUpdateCmd("energy_mo_$modbusId", 0);
+                $this->checkAndUpdateCmd("state_mo_$modbusId", 0);
+                $child->refreshWidget();
                 continue;
             }
 
@@ -565,6 +708,12 @@ class APSystemsSunspec extends eqLogic {
             if (!is_numeric($modbusId)) {
                 log::add('APSystemsSunspec', 'error', "ID Modbus invalide pour l'enfant avec logicalId : " . $child->getLogicalId());
                 $success = false;
+                $child->checkAndUpdateCmd('state', 0);
+                // Mettre à jour les commandes correspondantes dans l'ECU parent
+                $this->checkAndUpdateCmd("power_mo_$modbusId", 0);
+                $this->checkAndUpdateCmd("energy_mo_$modbusId", 0);
+                $this->checkAndUpdateCmd("state_mo_$modbusId", 0);
+                $child->refreshWidget();
                 continue;
             }
 
@@ -591,16 +740,68 @@ class APSystemsSunspec extends eqLogic {
                 }
 
                 $this->updateChildCommands($child, $data);
+
+                // Récupérer la puissance du micro-onduleur
+                $powerValue = 0;
+                $powerCmd = $child->getCmd('info', 'power');
+                if (is_object($powerCmd)) {
+                    $powerValue = $powerCmd->execCmd();
+                    if (is_numeric($powerValue) && $powerValue >= 0) {
+                        $powerValue = round(floatval($powerValue), 2);
+                        $totalPower += $powerValue;
+                    } else {
+                        $powerValue = 0;
+                    }
+                }
+                // Mettre à jour la commande power_mo_X dans l'ECU
+                $this->checkAndUpdateCmd("power_mo_$modbusId", $powerValue);
+
+                // Récupérer l'énergie du micro-onduleur
+                $energyValue = 0;
+                $energyCmd = $child->getCmd('info', 'energy');
+                if (is_object($energyCmd)) {
+                    $energyValue = $energyCmd->execCmd();
+                    if (is_numeric($energyValue) && $energyValue >= 0) {
+                        $energyValue = round(floatval($energyValue), 2);
+                        $totalEnergy += $energyValue;
+                    } else {
+                        $energyValue = 0;
+                    }
+                }
+                // Mettre à jour la commande energy_mo_X dans l'ECU
+                $this->checkAndUpdateCmd("energy_mo_$modbusId", $energyValue);
+
+                // Mettre à jour l'état du micro-onduleur
+                $child->checkAndUpdateCmd('state', 1);
+                // Mettre à jour la commande state_mo_X dans l'ECU
+                $this->checkAndUpdateCmd("state_mo_$modbusId", 1);
+
                 log::add('APSystemsSunspec', 'info', "Données ECU récupérées pour enfant ID $modbusId (logicalId : " . $child->getLogicalId() . ")");
             } catch (Exception $e) {
+                $child->checkAndUpdateCmd('state', 0);
+                // Mettre à jour les commandes correspondantes dans l'ECU parent
+                $this->checkAndUpdateCmd("power_mo_$modbusId", 0);
+                $this->checkAndUpdateCmd("energy_mo_$modbusId", 0);
+                $this->checkAndUpdateCmd("state_mo_$modbusId", 0);
                 log::add('APSystemsSunspec', 'error', "Erreur lors de la récupération des données ECU pour enfant ID $modbusId : " . $e->getMessage());
                 $success = false;
             } finally {
                 if ($client !== null) {
                     $client->close();
                 }
+                $child->refreshWidget();
             }
         }
+
+        // Arrondir les valeurs totales à 2 décimales avant de les enregistrer
+        $totalPower = round($totalPower, 2);
+        $totalEnergy = round($totalEnergy, 2);
+
+        // Mettre à jour les commandes de l'ECU parent
+        $this->checkAndUpdateCmd('power', $totalPower);
+        $this->checkAndUpdateCmd('totalEnergy', $totalEnergy);
+        $this->checkAndUpdateCmd('state', $totalPower > 0 ? 1 : 0);
+        $this->refreshWidget();
 
         return $success;
     }
@@ -618,6 +819,7 @@ class APSystemsSunspec extends eqLogic {
             $calcul = $cmd->getConfiguration('calcul', '');
             $coef = $cmd->getConfiguration('coef', 0);
             $nameCmd = $cmd->getName();
+            $logicalId = $cmd->getLogicalId();
 
             if ($registre < 40002 || $registre + $size - 1 > 40157) {
                 log::add('APSystemsSunspec', 'debug', "Registre $registre hors plage pour la commande {$cmd->getLogicalId()} (taille : $size)");
@@ -629,6 +831,16 @@ class APSystemsSunspec extends eqLogic {
             try {
                 if ($calcul == 'float32' && $size == 2) {
                     $value = $this->decodeFloat32($data[$index], $data[$index + 1]);
+                    // Filtrer les valeurs aberrantes (infinies, NaN ou trop grandes)
+                    if (is_numeric($value) && (abs($value) > 1e+30 || is_infinite($value) || is_nan($value))) {
+                        $value = null; // Remplacer par null si la valeur est aberrante
+                        log::add('APSystemsSunspec', 'warning', "Valeur aberrante détectée pour la commande {$cmd->getLogicalId()} : valeur ignorée");
+                    } else {
+                        // Arrondir toutes les valeurs float32 à 2 décimales
+                        if (is_numeric($value)) {
+                            $value = round($value, 2);
+                        }
+                    }
                 } elseif ($calcul == 'uint16') {
                     $value = $data[$index];
                 } elseif ($calcul == 'int16') {
@@ -657,11 +869,18 @@ class APSystemsSunspec extends eqLogic {
                     }
                     if (strpos($nameCmd, 'coef') === false) {
                         $value = $value * pow(10, $coef);
+                        // Filtrer les tensions incohérentes pour les commandes uint16 (vph1ph2, vph1, etc.)
+                        if (in_array($logicalId, ['vph1ph2', 'vph2ph3', 'vph3ph1', 'vph1', 'vph2', 'vph3'])) {
+                            if ($value < 0 || $value > 500) {
+                                $value = 0; // Remplacer par 0 si la tension est hors plage (0-500 V)
+                                log::add('APSystemsSunspec', 'warning', "Tension incohérente détectée pour la commande {$cmd->getLogicalId()} (valeur : $value V) : valeur remplacée par 0");
+                            }
+                        }
                     }
                 }
 
                 $child->checkAndUpdateCmd($cmd->getLogicalId(), $value);
-                log::add('APSystemsSunspec', 'debug', "Commande {$cmd->getLogicalId()} mise à jour avec la valeur : $value (registre : $registre, taille : $size, type : $calcul, coef : $coef)");
+                log::add('APSystemsSunspec', 'debug', "Commande {$cmd->getLogicalId()} mise à jour avec la valeur : " . (is_null($value) ? 'null' : $value) . " (registre : $registre, taille : $size, type : $calcul, coef : $coef)");
             } catch (Exception $e) {
                 log::add('APSystemsSunspec', 'error', "Erreur lors de la mise à jour de la commande {$cmd->getLogicalId()} : " . $e->getMessage());
             }
@@ -675,6 +894,11 @@ class APSystemsSunspec extends eqLogic {
             $existingEqLogic->setConfiguration('timeout', $timeout);
             $existingEqLogic->setConfiguration('type', $type);
             $existingEqLogic->checkAndCreateCommandsMO($type);
+            // Mettre à jour les commandes de l'ECU parent après la mise à jour de l'enfant
+            $parent = eqLogic::byId($this->getId());
+            if (is_object($parent)) {
+                $parent->checkAndCreateCommands();
+            }
             return;
         }
         $newEqLogic = new APSystemsSunspec();
@@ -696,6 +920,8 @@ class APSystemsSunspec extends eqLogic {
 
         $newEqLogic->checkAndCreateCommandsMO($type);
         log::add('APSystemsSunspec', 'debug', "Équipement créé avec ID : " . $newEqLogic->getId());
+        // Mettre à jour les commandes de l'ECU parent après la création de l'enfant
+        $this->checkAndCreateCommands();
     }
 
     public function setParameter($register, $value) {
