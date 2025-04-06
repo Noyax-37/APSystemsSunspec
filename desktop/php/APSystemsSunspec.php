@@ -191,6 +191,19 @@ function displayActionCard($action_name, $fa_icon, $action = '', $class = '') {
 									</div>
 								</div>
                             </div>
+                            <div class="form-group">
+                                <label class="col-sm-4 control-label">{{Heure de début d'arrêt de l'interrogation (HH:MM)}}</label>
+                                <div class="col-sm-2">
+                                    <input type="text" class="eqLogicAttr form-control" data-l1key="configuration" data-l2key="stopPollingStart" placeholder="22:00" />
+                                </div>
+                                <label class="col-sm-6">{{Ne rien mettre dans ces 2 champs si vous ne voulez pas interrompre l'interrogation}}</label>
+                            </div>
+                            <div class="form-group">
+                                <label class="col-sm-4 control-label">{{Heure de fin d'arrêt de l'interrogation (HH:MM)}}</label>
+                                <div class="col-sm-2">
+                                    <input type="text" class="eqLogicAttr form-control" data-l1key="configuration" data-l2key="stopPollingEnd" placeholder="06:00" />
+                                </div>
+                            </div>
                         </div>
 
                         <div class="col-lg-6">

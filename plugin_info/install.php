@@ -19,10 +19,32 @@ require_once dirname(__FILE__) . '/../../../core/php/core.inc.php';
 
 // Fonction exécutée automatiquement après l'installation du plugin
 function APSystemsSunspec_install() {
+    APSystemsSunspec_update();
 }
 
 // Fonction exécutée automatiquement après la mise à jour du plugin
 function APSystemsSunspec_update() {
+    $core_version = 'x.y';
+    if (!file_exists(dirname(__FILE__) . '/info.json')) {
+        log::add('APSystemsSunspec','warning','Pas de fichier info.json');
+        goto step2;
+    }
+    $data = json_decode(file_get_contents(dirname(__FILE__) . '/info.json'), true);
+    if (!is_array($data)) {
+        log::add('APSystemsSunspec','warning',__('Impossible de décoder le fichier info.json', __FILE__));
+        goto step2;
+    }
+    try {
+        $core_version = $data['pluginVersion'];
+        config::save('version', $core_version, 'APSystemsSunspec');
+    } catch (\Exception $e) {
+
+    }
+
+    step2:
+
+    message::removeAll('APSystemsSunspec');
+    message::add('APSystemsSunspec', sprintf(__("Installation du plugin APSystemsSunspec terminée, vous êtes en version %s", __FILE__), $core_version));
 }
 
 // Fonction exécutée automatiquement après la suppression du plugin

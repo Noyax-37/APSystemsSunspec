@@ -21,20 +21,36 @@ if (!isConnect()) {
   include_file('desktop', '404', 'php');
   die();
 }
+
+
+  sendVarToJS('version', config::byKey('version', 'APSystemsSunspec', 'unknown', true));
+  include_file('desktop', 'APSystemsSunspec.config', 'js', 'APSystemsSunspec');
+  
+  $core_version = 'x.y';
+  
+  if (!file_exists(dirname(__FILE__) . '/info.json')) {
+    log::add('APSystemsSunspec','warning',__('Pas de fichier info.json', __FILE__));
+  }
+  $data = json_decode(file_get_contents(dirname(__FILE__) . '/info.json'), true);
+  if (!is_array($data)) {
+    log::add('APSystemsSunspec','warning',__('Impossible de décoder le fichier info.json', __FILE__));
+  }
+  try {
+    $core_version = $data['pluginVersion'];
+  } catch (\Exception $e) {
+    log::add('APSystemsSunspec','warning',__('Impossible de récupérer la version.', __FILE__));
+  }
+
 ?>
 <form class="form-horizontal">
   <fieldset>
+    <legend><i class="icon loisir-pacman1"></i> {{Version}}</legend>
     <div class="form-group">
-      <label class="col-sm-3 control-label">{{Heure de début d'arrêt de l'interrogation (HH:MM)}}</label>
-      <div class="col-sm-3">
-          <input type="text" class="eqLogicAttr form-control" data-l1key="configuration" data-l2key="stopPollingStart" placeholder="22:00" />
-      </div>
-  </div>
-  <div class="form-group">
-      <label class="col-sm-3 control-label">{{Heure de fin d'arrêt de l'interrogation (HH:MM)}}</label>
-      <div class="col-sm-3">
-          <input type="text" class="eqLogicAttr form-control" data-l1key="configuration" data-l2key="stopPollingEnd" placeholder="06:00" />
-      </div>
-  </div>
+        <label class="col-lg-4 control-label">Core APSystemsSunspec : <sup><i class="fas fa-question-circle tooltips" title="{{Version du plugin}}" style="font-size : 1em;color:grey;"></i></sup></label>
+        <span style="top:6px;" class="col-lg-4"><?php echo $core_version; ?></span>
+    </div>
   </fieldset>
+
 </form>
+
+

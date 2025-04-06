@@ -1,9 +1,9 @@
 {
 	"id" : "APSystemsSunspec",
 	"name" : "APSystems Sunspec",
-	"pluginVersion": "v1.2",
+	"pluginVersion": "v1.3",
 	"description": {
-		"fr_FR": "Template servant de base à la création de plugins pour Jeedom"
+		"fr_FR": "Plugin permettant de récupérer les données des onduleurs APSystems via le protocole Sunspec."
 	},
 	"licence": "AGPL",
 	"author": "Noyax37",
@@ -12,10 +12,10 @@
 	"hasDependency": false,
 	"hasOwnDeamon": false,
 	"maxDependancyInstallTime": 0,
-	"changelog_beta": "https:\/\/doc.jeedom.com\/#language#\/plugins\/programming\/template\/beta\/changelog",
-	"changelog": "https:\/\/doc.jeedom.com\/#language#\/plugins\/programming\/template\/changelog",
-	"documentation_beta": "https:\/\/doc.jeedom.com\/#language#\/plugins\/programming\/template\/beta",
-	"documentation": "https:\/\/doc.jeedom.com\/#language#\/plugins\/programming\/template",
+	"changelog_beta": "https://github.com/Noyax-37/APSystemsSunspec/blob/develop/docs/fr_FR/changelog.md",
+	"changelog": "https://github.com/Noyax-37/APSystemsSunspec/blob/master/docs/fr_FR/changelog.md",
+	"documentation_beta": "https://github.com/Noyax-37/APSystemsSunspec/blob/develop/docs/fr_FR/index.md",
+	"documentation": "https://github.com/Noyax-37/APSystemsSunspec/blob/master/docs/fr_FR/index.md",
 	"link": {
 		"forum": "Lien vers le forum",
 		"video": "Lien vers une video"
