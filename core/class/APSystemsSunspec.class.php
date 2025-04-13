@@ -1,4 +1,6 @@
 <?php
+
+// 
 require_once dirname(__FILE__) . '/../../../../core/php/core.inc.php';
 require_once dirname(__FILE__) . '/../lib/ModbusClient.php';
 
@@ -117,12 +119,17 @@ class APSystemsSunspec extends eqLogic {
             if (!is_object($stateCmd)) {
                 $stateCmd = new APSystemsSunspecCmd();
             }
+
+            $displayParam = displayParamsAPS();
+
             $stateCmd->setName(__('Widget', __FILE__));
             $stateCmd->setEqLogic_id($this->getId());
             $stateCmd->setLogicalId('widget');
             $stateCmd->setType('info');
             $stateCmd->setSubType('string');
             $stateCmd->setConfiguration('widget', '');
+            $stateCmd->setConfiguration('template', 'APSystemsSunspec::distribution_onduleur_APSystemsSunspec');
+            $stateCmd->setDisplay('parameters', $displayParam);
             $stateCmd->setOrder($order);
             $stateCmd->save();
 
@@ -261,8 +268,26 @@ class APSystemsSunspec extends eqLogic {
             $stateCmd->setLogicalId('state');
             $stateCmd->setType('info');
             $stateCmd->setSubType('binary');
-            $stateCmd->setOrder(1);
+            $stateCmd->setOrder(2);
             $stateCmd->save();
+
+            $displayParam = displayParamsAPS();
+            $stateCmdWid = $this->getCmd(null, 'widget');
+            if (!is_object($stateCmdWid)) {
+                $stateCmdWid = new APSystemsSunspecCmd();
+            }
+            $stateCmdWid->setName(__('Widget', __FILE__));
+            $stateCmdWid->setEqLogic_id($this->getId());
+            $stateCmdWid->setLogicalId('widget');
+            $stateCmdWid->setType('info');
+            $stateCmdWid->setSubType('string');
+            $stateCmdWid->setConfiguration('widget', '');
+            $stateCmdWid->setConfiguration('template', 'APSystemsSunspec::distribution_onduleur_APSystemsSunspec');
+            $stateCmdWid->setDisplay('parameters', $displayParam);
+            $stateCmdWid->setOrder(1);
+            $stateCmdWid->save();
+
+
             log::add('APSystemsSunspec', 'info', 'Commandes créées pour le micro-onduleur ID : ' . $this->getId());
         }
     }
@@ -436,7 +461,7 @@ class APSystemsSunspec extends eqLogic {
         }
         log::add('APSystemsSunspec', 'info', "Coefficients mis à jour : A={$coef['coefA']}, V={$coef['coefV']}, P={$coef['coefP']}, F={$coef['coefF']}, VA={$coef['coefVA']}, VAR={$coef['coefVAR']}, PF={$coef['coefPF']}, E={$coef['coefE']}, Temp={$coef['coefTemp']}");
 
-        $order = 2;
+        $order = 3;
         $this->createCommand('ID', 'id', 'info', 'numeric', '', 40002, 'uint16', 1, $order);
         $order++;
         $this->createCommand('length', 'Model Length', 'info', 'numeric', '', 40003, 'uint16', 2, $order);
@@ -554,67 +579,67 @@ class APSystemsSunspec extends eqLogic {
         $this->createCommand('nb_reg_dcdata', 'Nombre de registres pour DC data', 'info', 'numeric', '', 40213, 'uint16', 1, $order);
         if ($pv >= 1){
             $order++;
-            $this->createCommand('dc_voltage_dcv1', 'Tension DC PV1', 'info', 'numeric', 'V', 40214, 'float32', 2, $order);
+            $this->createCommand('dc_voltage_dcv1', 'Tension DC PV1', 'info', 'numeric', 'V', 40214, 'float32', 2, $order, 0, 1, 'pv1_voltage');
             $order++;
-            $this->createCommand('dc_current_dcv1', 'Courant DC PV1', 'info', 'numeric', 'A', 40230, 'float32', 2, $order);
+            $this->createCommand('dc_current_dcv1', 'Courant DC PV1', 'info', 'numeric', 'A', 40230, 'float32', 2, $order, 0, 1, 'pv1_current');
             $order++;
-            $this->createCommand('dc_power_dcv1', 'Puissance DC PV1', 'info', 'numeric', 'W', 40246, 'float32', 2, $order);
+            $this->createCommand('dc_power_dcv1', 'Puissance DC PV1', 'info', 'numeric', 'W', 40246, 'float32', 2, $order, 0, 1, 'pv1_power');
         }
         if ($pv >= 2){
             $order++;
-            $this->createCommand('dc_voltage_dcv2', 'Tension DC PV2', 'info', 'numeric', 'V', 40216, 'float32', 2, $order);
+            $this->createCommand('dc_voltage_dcv2', 'Tension DC PV2', 'info', 'numeric', 'V', 40216, 'float32', 2, $order, 0, 1, 'pv2_voltage');
             $order++;
-            $this->createCommand('dc_current_dcv2', 'Courant DC PV2', 'info', 'numeric', 'A', 40232, 'float32', 2, $order);
+            $this->createCommand('dc_current_dcv2', 'Courant DC PV2', 'info', 'numeric', 'A', 40232, 'float32', 2, $order, 0, 1, 'pv2_current');
             $order++;
-            $this->createCommand('dc_power_dcv2', 'Puissance DC PV2', 'info', 'numeric', 'W', 40248, 'float32', 2, $order);
+            $this->createCommand('dc_power_dcv2', 'Puissance DC PV2', 'info', 'numeric', 'W', 40248, 'float32', 2, $order, 0, 1, 'pv2_power');
         }
         if ($pv >= 3){
             $order++;
-            $this->createCommand('dc_voltage_dcv3', 'Tension DC PV3', 'info', 'numeric', 'V', 40218, 'float32', 2, $order);
+            $this->createCommand('dc_voltage_dcv3', 'Tension DC PV3', 'info', 'numeric', 'V', 40218, 'float32', 2, $order, 0, 1, 'pv3_voltage');
             $order++;
-            $this->createCommand('dc_current_dcv3', 'Courant DC PV3', 'info', 'numeric', 'A', 40234, 'float32', 2, $order);
+            $this->createCommand('dc_current_dcv3', 'Courant DC PV3', 'info', 'numeric', 'A', 40234, 'float32', 2, $order, 0, 1, 'pv3_current');
             $order++;
-            $this->createCommand('dc_power_dcv3', 'Puissance DC PV3', 'info', 'numeric', 'W', 40250, 'float32', 2, $order);
+            $this->createCommand('dc_power_dcv3', 'Puissance DC PV3', 'info', 'numeric', 'W', 40250, 'float32', 2, $order, 0, 1, 'pv3_power');
         }
         if ($pv >= 4){
             $order++;
-            $this->createCommand('dc_voltage_dcv4', 'Tension DC PV4', 'info', 'numeric', 'V', 40220, 'float32', 2, $order);
+            $this->createCommand('dc_voltage_dcv4', 'Tension DC PV4', 'info', 'numeric', 'V', 40220, 'float32', 2, $order, 0, 1, 'pv4_voltage');
             $order++;
-            $this->createCommand('dc_current_dcv4', 'Courant DC PV4', 'info', 'numeric', 'A', 40236, 'float32', 2, $order);
+            $this->createCommand('dc_current_dcv4', 'Courant DC PV4', 'info', 'numeric', 'A', 40236, 'float32', 2, $order, 0, 1, 'pv4_current');
             $order++;
-            $this->createCommand('dc_power_dcv4', 'Puissance DC PV4', 'info', 'numeric', 'W', 40252, 'float32', 2, $order);
+            $this->createCommand('dc_power_dcv4', 'Puissance DC PV4', 'info', 'numeric', 'W', 40252, 'float32', 2, $order, 0, 1, 'pv4_power');
         }
         if ($pv >= 5){
             $order++;
-            $this->createCommand('dc_voltage_dcv5', 'Tension DC PV5', 'info', 'numeric', 'V', 40222, 'float32', 2, $order);
+            $this->createCommand('dc_voltage_dcv5', 'Tension DC PV5', 'info', 'numeric', 'V', 40222, 'float32', 2, $order, 0, 1, 'pv5_voltage');
             $order++;
-            $this->createCommand('dc_current_dcv5', 'Courant DC PV5', 'info', 'numeric', 'A', 40238, 'float32', 2, $order);
+            $this->createCommand('dc_current_dcv5', 'Courant DC PV5', 'info', 'numeric', 'A', 40238, 'float32', 2, $order, 0, 1, 'pv5_current');
             $order++;
-            $this->createCommand('dc_power_dcv5', 'Puissance DC PV5', 'info', 'numeric', 'W', 40254, 'float32', 2, $order);
+            $this->createCommand('dc_power_dcv5', 'Puissance DC PV5', 'info', 'numeric', 'W', 40254, 'float32', 2, $order, 0, 1, 'pv5_power');
         }
         if ($pv >= 6){
             $order++;
-            $this->createCommand('dc_voltage_dcv6', 'Tension DC PV6', 'info', 'numeric', 'V', 40224, 'float32', 2, $order);
+            $this->createCommand('dc_voltage_dcv6', 'Tension DC PV6', 'info', 'numeric', 'V', 40224, 'float32', 2, $order, 0, 1, 'pv6_voltage');
             $order++;
-            $this->createCommand('dc_current_dcv6', 'Courant DC PV6', 'info', 'numeric', 'A', 40240, 'float32', 2, $order);
+            $this->createCommand('dc_current_dcv6', 'Courant DC PV6', 'info', 'numeric', 'A', 40240, 'float32', 2, $order, 0, 1, 'pv6_current');
             $order++;
-            $this->createCommand('dc_power_dcv6', 'Puissance DC PV6', 'info', 'numeric', 'W', 40256, 'float32', 2, $order);
+            $this->createCommand('dc_power_dcv6', 'Puissance DC PV6', 'info', 'numeric', 'W', 40256, 'float32', 2, $order, 0, 1, 'pv6_power');
         }
         if ($pv >= 7){
             $order++;
-            $this->createCommand('dc_voltage_dcv7', 'Tension DC PV7', 'info', 'numeric', 'V', 40226, 'float32', 2, $order);
+            $this->createCommand('dc_voltage_dcv7', 'Tension DC PV7', 'info', 'numeric', 'V', 40226, 'float32', 2, $order, 0, 1, 'pv7_voltage');
             $order++;
-            $this->createCommand('dc_current_dcv7', 'Courant DC PV7', 'info', 'numeric', 'A', 40242, 'float32', 2, $order);
+            $this->createCommand('dc_current_dcv7', 'Courant DC PV7', 'info', 'numeric', 'A', 40242, 'float32', 2, $order, 0, 1, 'pv7_current');
             $order++;
-            $this->createCommand('dc_power_dcv7', 'Puissance DC PV7', 'info', 'numeric', 'W', 40258, 'float32', 2, $order);
+            $this->createCommand('dc_power_dcv7', 'Puissance DC PV7', 'info', 'numeric', 'W', 40258, 'float32', 2, $order, 0, 1, 'pv7_power');
         }
         if ($pv >= 8){
             $order++;
-            $this->createCommand('dc_voltage_dcv8', 'Tension DC PV8', 'info', 'numeric', 'V', 40228, 'float32', 2, $order);
+            $this->createCommand('dc_voltage_dcv8', 'Tension DC PV8', 'info', 'numeric', 'V', 40228, 'float32', 2, $order, 0, 1, 'pv8_voltage');
             $order++;
-            $this->createCommand('dc_current_dcv8', 'Courant DC PV8', 'info', 'numeric', 'A', 40244, 'float32', 2, $order);
+            $this->createCommand('dc_current_dcv8', 'Courant DC PV8', 'info', 'numeric', 'A', 40244, 'float32', 2, $order, 0, 1, 'pv8_current');
             $order++;
-            $this->createCommand('dc_power_dcv8', 'Puissance DC PV8', 'info', 'numeric', 'W', 40260, 'float32', 2, $order);
+            $this->createCommand('dc_power_dcv8', 'Puissance DC PV8', 'info', 'numeric', 'W', 40260, 'float32', 2, $order, 0, 1, 'pv8_power');
         }
     }
 
@@ -1016,7 +1041,7 @@ class APSystemsSunspec extends eqLogic {
                 for ($i = 0; $i < $nbReg; $i++) {
                     $data[$i + $nbReg] = $secondBlock[$i];
                 }
-/*
+    /*
                 $premReg = $premReg + $nbReg;
                 $nbReg = 1;
                 $thirdBlock = $client->readHoldingRegisters($premReg, $nbReg);
@@ -1026,7 +1051,7 @@ class APSystemsSunspec extends eqLogic {
                 for ($i = 0; $i < $nbReg; $i++) {
                     $data[$i + $nbReg + 125] = $thirdBlock[$i];
                 }
-*/
+    */
                 $this->updateChildCommands($child, $data);
 
                 // Récupérer la puissance du micro-onduleur
@@ -1316,8 +1341,8 @@ class APSystemsSunspecCmd extends cmd {
 
 /*     * **********************Fonctions locales*************************** */
 
-/* 
-function displayParams(){
+ 
+function displayParamsAPS(){
     // : Fonction de personnalisation des paramètres de l'équipement    
     $return = array();
     $return = array(
@@ -1401,4 +1426,3 @@ function displayParams(){
     );
     return($return);
 }
-*/
