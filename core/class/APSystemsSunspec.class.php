@@ -3,6 +3,21 @@ require_once dirname(__FILE__) . '/../../../../core/php/core.inc.php';
 require_once dirname(__FILE__) . '/../lib/ModbusClient.php';
 
 class APSystemsSunspec extends eqLogic {
+
+    public static function getConfigForCommunity() {
+        $hw = jeedom::getHardwareName();
+        if ($hw == 'diy')
+            $hw = trim(shell_exec('systemd-detect-virt'));
+        if ($hw == 'none')
+            $hw = 'diy';
+        $distrib = trim(shell_exec('. /etc/*-release && echo $ID $VERSION_ID'));
+        $res = 'OS: ' . $distrib . ' on ' . $hw;
+        $res .= ' ; PHP: ' . phpversion();
+        $res .= '<br/>APSystemsSunspec: v ' . config::byKey('version', 'APSystemsSunspec', 'unknown', true);
+        return $res;
+      }
+     
+
     public function preSave() {
         if (empty($this->getLogicalId())) {
             throw new Exception('L\'adresse IP (logicalId) ne peut pas être vide.');
@@ -95,7 +110,24 @@ class APSystemsSunspec extends eqLogic {
     
     public function checkAndCreateCommands() {
         if (strpos($this->getLogicalId(), '_ID') === false) {
+
+            // Commande pour l'application du widget'
+            $order = 1;
+            $stateCmd = $this->getCmd(null, 'widget');
+            if (!is_object($stateCmd)) {
+                $stateCmd = new APSystemsSunspecCmd();
+            }
+            $stateCmd->setName(__('Widget', __FILE__));
+            $stateCmd->setEqLogic_id($this->getId());
+            $stateCmd->setLogicalId('widget');
+            $stateCmd->setType('info');
+            $stateCmd->setSubType('string');
+            $stateCmd->setConfiguration('widget', '');
+            $stateCmd->setOrder($order);
+            $stateCmd->save();
+
             // Commande pour l'état global de l'ECU
+            $order++;
             $stateCmd = $this->getCmd(null, 'state');
             if (!is_object($stateCmd)) {
                 $stateCmd = new APSystemsSunspecCmd();
@@ -105,10 +137,12 @@ class APSystemsSunspec extends eqLogic {
             $stateCmd->setLogicalId('state');
             $stateCmd->setType('info');
             $stateCmd->setSubType('binary');
-            $stateCmd->setOrder(1);
+            $stateCmd->setConfiguration('widget', '');
+            $stateCmd->setOrder($order);
             $stateCmd->save();
 
             // Commande pour la puissance totale
+            $order++;
             $powerCmd = $this->getCmd(null, 'power');
             if (!is_object($powerCmd)) {
                 $powerCmd = new APSystemsSunspecCmd();
@@ -118,11 +152,13 @@ class APSystemsSunspec extends eqLogic {
             $powerCmd->setLogicalId('power');
             $powerCmd->setType('info');
             $powerCmd->setSubType('numeric');
+            $powerCmd->setConfiguration('widget', 'pv_power');
             $powerCmd->setUnite('W');
-            $powerCmd->setOrder(2);
+            $powerCmd->setOrder($order);
             $powerCmd->save();
 
             // Commande pour l'énergie totale
+            $order++;
             $energyCmd = $this->getCmd(null, 'totalEnergy');
             if (!is_object($energyCmd)) {
                 $energyCmd = new APSystemsSunspecCmd();
@@ -132,11 +168,13 @@ class APSystemsSunspec extends eqLogic {
             $energyCmd->setLogicalId('totalEnergy');
             $energyCmd->setType('info');
             $energyCmd->setSubType('numeric');
+            $energyCmd->setConfiguration('widget', 'daily_solar');
             $energyCmd->setUnite('Wh');
-            $energyCmd->setOrder(3);
+            $energyCmd->setOrder($order);
             $energyCmd->save();
 
             // Commande pour le rafraîchissement manuel
+            $order2 = 1000;
             $refreshCmd = $this->getCmd(null, 'refresh');
             if (!is_object($refreshCmd)) {
                 $refreshCmd = new APSystemsSunspecCmd();
@@ -146,11 +184,13 @@ class APSystemsSunspec extends eqLogic {
             $refreshCmd->setLogicalId('refresh');
             $refreshCmd->setType('action');
             $refreshCmd->setSubType('other');
+            $refreshCmd->setConfiguration('widget', '');
+            $refreshCmd->setOrder($order2);
             $refreshCmd->save();
 
             // Créer les commandes pour chaque micro-onduleur (puissance, énergie, état)
             $children = eqLogic::byTypeAndSearchConfiguration('APSystemsSunspec', array('parent_id' => $this->getId()));
-            $order = 4; // Commencer après les commandes principales (state, power, totalEnergy)
+            $order++; // Commencer après les commandes principales (state, power, totalEnergy)
 
             foreach ($children as $child) {
                 $modbusId = $child->getConfiguration('modbus_id');
@@ -169,7 +209,10 @@ class APSystemsSunspec extends eqLogic {
                     0, // Pas de registre, car c'est une valeur calculée
                     '', // Pas de calcul spécifique
                     1,
-                    $order
+                    $order,
+                    0, // Pas de coefficient
+                    1, // Visible
+                    'pv' . $modbusId . '_power' // Widget spécifique
                 );
                 $order++;
 
@@ -183,7 +226,10 @@ class APSystemsSunspec extends eqLogic {
                     0,
                     '',
                     1,
-                    $order
+                    $order,
+                    0, // Pas de coefficient
+                    1, // Visible
+                    'pv' . $modbusId . '_energy' // Widget spécifique
                 );
                 $order++;
 
@@ -221,7 +267,7 @@ class APSystemsSunspec extends eqLogic {
         }
     }
 
-    public function createCommand($logicalId, $name, $type, $subType, $unit = '', $registre = 0, $calcul = '', $size = 1, $order = 1, $coef = 0, $isVisible = 1) {
+    public function createCommand($logicalId, $name, $type, $subType, $unit = '', $registre = 0, $calcul = '', $size = 1, $order = 1, $coef = 0, $isVisible = 1, $widget = '') {
         $cmd = $this->getCmd(null, $logicalId);
         if (!is_object($cmd)) {
             log::add('APSystemsSunspec', 'debug', 'Création de la commande : ' . $name);
@@ -237,6 +283,7 @@ class APSystemsSunspec extends eqLogic {
         $cmd->setConfiguration('registre', $registre);
         $cmd->setConfiguration('calcul', $calcul);
         $cmd->setConfiguration('size', $size);
+        $cmd->setConfiguration('widget', $widget);
         $cmd->setIsVisible($isVisible);
         $cmd->setOrder($order);
         $cmd->setConfiguration('coef', $coef);
@@ -352,7 +399,7 @@ class APSystemsSunspec extends eqLogic {
         }
     }
 
-    public function checkAndCreateCommandsMO($type) {
+    public function checkAndCreateCommandsMO($type, $pv = 4) {
         $order2 = 500;
         $this->createCommand('coefA', 'Coefficient Intensité', 'info', 'numeric', '', 40076, 'int16', 1, $order2);
         $order2++;
@@ -446,9 +493,9 @@ class APSystemsSunspec extends eqLogic {
         $order++;
         $this->createCommand('cabinet_temp', 'Température du boîtier', 'info', 'numeric', '°C', 40103, 'int16', 1, $order, $coef['coefTemp']);
         $order++;
-        $this->createCommand('operating_state', 'État de fonctionnement', 'info', 'string', '', 40104, 'enum16', 1, $order);
+        $this->createCommand('operating_state', 'État de fonctionnement', 'info', 'string', '', 40108, 'enum16', 1, $order);
         $order++;
-        $this->createCommand('event1', 'Événement 1', 'info', 'string', '', 40105, 'bitfield32', 2, $order);
+        $this->createCommand('event1', 'Événement 1', 'info', 'string', '', 40110, 'bitfield32', 2, $order);
         $order++;
         $this->createCommand('id_float', 'ID float (111 = mono, 113 = tri)', 'info', 'numeric', '', 40122, 'uint16', 1, $order);
         $order++;
@@ -490,7 +537,85 @@ class APSystemsSunspec extends eqLogic {
         $order++;
         $this->createCommand('energy_float', 'Énergie float', 'info', 'numeric', 'Wh', 40154, 'float32', 2, $order);
         $order++;
-        $this->createCommand('cabinet_temp_float', 'Température du boîtier float', 'info', 'numeric', '°C', 40156, 'float32', 2, $order);
+        $this->createCommand('cabinet_temp_float', 'Température du boîtier float', 'info', 'numeric', '°C', 40162, 'float32', 2, $order);
+        $order++;
+        $this->createCommand('id_ic', 'ID contrôles', 'info', 'numeric', '°C', 40184, 'uint16', 1, $order);
+        $order++;
+        $this->createCommand('nb_reg_ic', 'Nombre de registres pour IC', 'info', 'numeric', '', 40185, 'uint16', 1, $order);
+        $order++;
+        $this->createCommand('connection_state', 'État de connexion', 'info', 'numeric', '', 40186, 'uint16', 1, $order);
+        $order++;
+        $this->createCommand('wmaxlimpct', 'Puissance max limite (en %)', 'info', 'numeric', '%', 40189, 'uint16', 1, $order, -1);
+        $order++;
+        $this->createCommand('wmaxlim_enabled', 'Limitation puissance activée (1= activée)', 'info', 'numeric', '', 40193, 'uint16', 1, $order);
+        $order++;
+        $this->createCommand('id_dcdata', 'ID DC data', 'info', 'numeric', '', 40212, 'uint16', 1, $order);
+        $order++;
+        $this->createCommand('nb_reg_dcdata', 'Nombre de registres pour DC data', 'info', 'numeric', '', 40213, 'uint16', 1, $order);
+        if ($pv >= 1){
+            $order++;
+            $this->createCommand('dc_voltage_dcv1', 'Tension DC PV1', 'info', 'numeric', 'V', 40214, 'float32', 2, $order);
+            $order++;
+            $this->createCommand('dc_current_dcv1', 'Courant DC PV1', 'info', 'numeric', 'A', 40230, 'float32', 2, $order);
+            $order++;
+            $this->createCommand('dc_power_dcv1', 'Puissance DC PV1', 'info', 'numeric', 'W', 40246, 'float32', 2, $order);
+        }
+        if ($pv >= 2){
+            $order++;
+            $this->createCommand('dc_voltage_dcv2', 'Tension DC PV2', 'info', 'numeric', 'V', 40216, 'float32', 2, $order);
+            $order++;
+            $this->createCommand('dc_current_dcv2', 'Courant DC PV2', 'info', 'numeric', 'A', 40232, 'float32', 2, $order);
+            $order++;
+            $this->createCommand('dc_power_dcv2', 'Puissance DC PV2', 'info', 'numeric', 'W', 40248, 'float32', 2, $order);
+        }
+        if ($pv >= 3){
+            $order++;
+            $this->createCommand('dc_voltage_dcv3', 'Tension DC PV3', 'info', 'numeric', 'V', 40218, 'float32', 2, $order);
+            $order++;
+            $this->createCommand('dc_current_dcv3', 'Courant DC PV3', 'info', 'numeric', 'A', 40234, 'float32', 2, $order);
+            $order++;
+            $this->createCommand('dc_power_dcv3', 'Puissance DC PV3', 'info', 'numeric', 'W', 40250, 'float32', 2, $order);
+        }
+        if ($pv >= 4){
+            $order++;
+            $this->createCommand('dc_voltage_dcv4', 'Tension DC PV4', 'info', 'numeric', 'V', 40220, 'float32', 2, $order);
+            $order++;
+            $this->createCommand('dc_current_dcv4', 'Courant DC PV4', 'info', 'numeric', 'A', 40236, 'float32', 2, $order);
+            $order++;
+            $this->createCommand('dc_power_dcv4', 'Puissance DC PV4', 'info', 'numeric', 'W', 40252, 'float32', 2, $order);
+        }
+        if ($pv >= 5){
+            $order++;
+            $this->createCommand('dc_voltage_dcv5', 'Tension DC PV5', 'info', 'numeric', 'V', 40222, 'float32', 2, $order);
+            $order++;
+            $this->createCommand('dc_current_dcv5', 'Courant DC PV5', 'info', 'numeric', 'A', 40238, 'float32', 2, $order);
+            $order++;
+            $this->createCommand('dc_power_dcv5', 'Puissance DC PV5', 'info', 'numeric', 'W', 40254, 'float32', 2, $order);
+        }
+        if ($pv >= 6){
+            $order++;
+            $this->createCommand('dc_voltage_dcv6', 'Tension DC PV6', 'info', 'numeric', 'V', 40224, 'float32', 2, $order);
+            $order++;
+            $this->createCommand('dc_current_dcv6', 'Courant DC PV6', 'info', 'numeric', 'A', 40240, 'float32', 2, $order);
+            $order++;
+            $this->createCommand('dc_power_dcv6', 'Puissance DC PV6', 'info', 'numeric', 'W', 40256, 'float32', 2, $order);
+        }
+        if ($pv >= 7){
+            $order++;
+            $this->createCommand('dc_voltage_dcv7', 'Tension DC PV7', 'info', 'numeric', 'V', 40226, 'float32', 2, $order);
+            $order++;
+            $this->createCommand('dc_current_dcv7', 'Courant DC PV7', 'info', 'numeric', 'A', 40242, 'float32', 2, $order);
+            $order++;
+            $this->createCommand('dc_power_dcv7', 'Puissance DC PV7', 'info', 'numeric', 'W', 40258, 'float32', 2, $order);
+        }
+        if ($pv >= 8){
+            $order++;
+            $this->createCommand('dc_voltage_dcv8', 'Tension DC PV8', 'info', 'numeric', 'V', 40228, 'float32', 2, $order);
+            $order++;
+            $this->createCommand('dc_current_dcv8', 'Courant DC PV8', 'info', 'numeric', 'A', 40244, 'float32', 2, $order);
+            $order++;
+            $this->createCommand('dc_power_dcv8', 'Puissance DC PV8', 'info', 'numeric', 'W', 40260, 'float32', 2, $order);
+        }
     }
 
     public function refreshData() {
@@ -507,38 +632,187 @@ class APSystemsSunspec extends eqLogic {
         return $return;
     }
 
+    private function decodeBitfield32($decode, $bitfield) {
+        if ($decode == 1) {
+            switch ($bitfield) {
+                case 0:
+                    $return = 'Aucun événement';
+                    break;
+                case 1:
+                    $return = '1 ';
+                    break;
+                case 2:
+                    $return = '2 ';
+                    break;
+                case 3:
+                    $return = '3 ';
+                    break;
+                case 4:
+                    $return = '4 ';
+                    break;
+                case 5:
+                    $return = '5 ';
+                    break;
+                case 6:
+                    $return = '6';
+                    break;
+                case 7:
+                    $return = '7 ';
+                    break;
+                case 8:
+                    $return = '8 ';
+                    break;
+                case 9:
+                    $return = '9 ';
+                    break;
+                case 10:
+                    $return = '10 ';
+                    break;
+                case 11:
+                    $return = '11 ';
+                    break;
+                case 12:
+                    $return = '12 ';
+                    break;
+                case 13:    
+                    $return = '13 ';
+                    break;
+                case 14:
+                    $return = '14 ';
+                    break;
+                case 15:
+                    $return = '15 ';
+                    break;
+                case 16:
+                    $return = '16 ';
+                    break;
+                case 17:
+                    $return = '17 ';
+                    break;
+                case 18:
+                    $return = '18 ';
+                    break;
+                case 19:
+                    $return = '19 ';
+                    break;
+                case 20:
+                    $return = '20 ';
+                    break;
+                case 21:
+                    $return = '21 ';
+                    break;
+                case 22:
+                    $return = '22 ';
+                    break;
+                case 23:
+                    $return = '23 ';
+                    break;
+                case 24:
+                    $return = '24 ';
+                    break;
+                case 25:
+                    $return = '25 ';
+                    break;
+                case 26:
+                    $return = '26 ';
+                    break;
+                case 27:
+                    $return = '27 ';
+                    break;
+                case 28:
+                    $return = '28 ';
+                    break;
+                case 29:
+                    $return = '29 ';
+                    break;
+                case 30:
+                    $return = '30 ';
+                    break;
+                case 31:
+                    $return = '31 ';
+                    break;
+                default:
+                    $return = '';
+            }
+        }
+        return $return;
+    }
+
     public function scanMicroInverters($objectId = null) {
         $ip = $this->getLogicalId();
         $timeout = $this->getConfiguration('timeout', 3);
         $modbusId = 1;
         $maxAttempts = 247;
-
+        $order = $this->getOrder();
+    
         log::add('APSystemsSunspec', 'info', "Début du scan pour IP : $ip (ID équipement : " . $this->getId() . ")");
         while ($modbusId <= $maxAttempts) {
             try {
+                // Premier appel à queryModbus pour le registre 40070
                 $response = $this->queryModbus($ip, $modbusId, 40070, $timeout);
-                log::add('APSystemsSunspec', 'debug', "Réponse Modbus ID $modbusId : " . ($response === false ? 'aucune' : $response));
+                log::add('APSystemsSunspec', 'debug', "Valeur exacte de \$response pour Modbus ID $modbusId (registre 40070) : " . var_export($response, true));
 
                 if ($response === false) {
-                    log::add('APSystemsSunspec', 'debug', "Aucune réponse pour Modbus ID $modbusId, fin du scan");
+                    log::add('APSystemsSunspec', 'debug', "Aucune réponse pour Modbus ID $modbusId (registre 40070), fin du scan");
+                    break;
+                }                
+
+                log::add('APSystemsSunspec', 'debug', "Valeur exacte de \$response pour Modbus ID $modbusId (registre 40070) : " . var_export($response, true));
+    
+                if ($response === false) {
+                    log::add('APSystemsSunspec', 'debug', "Aucune réponse pour Modbus ID $modbusId (registre 40070), fin du scan");
                     break;
                 }
+    
+                // Lire les 8 registres pour le modèle (40020 à 40027, pour une chaîne de 16 caractères)
+                $client = new ModbusClient($ip, 502, $timeout);
+                $client->setSlave($modbusId);
+                $modelData = [];
+                $modelData = $client->readHoldingRegisters(40020, 16);
+                if (isset($client)) {
+                    $client->close();
+                }
 
+                log::add('APSystemsSunspec', 'debug', "Valeur exacte de \$modelData pour Modbus ID $modbusId (registre 40020) : " . var_export($modelData, true));
+    
+                if ($modelData === false) {
+                    log::add('APSystemsSunspec', 'debug', "Aucune réponse pour Modbus ID $modbusId (registre 40020), fin du scan");
+                    break;
+                }
+    
+                // Convertir les données en une chaîne
+                $responsemodel = '';
+                foreach ($modelData as $value) {
+                    $responsemodel .= pack('n', $value);
+                }
+                $responsemodel = trim($responsemodel); // Supprimer les caractères nuls ou espaces
+                log::add('APSystemsSunspec', 'debug', "Réponse Modbus ID $modbusId : $response - Modèle : $responsemodel");
+    
                 $type = null;
                 if ($response == 101) {
                     $type = 'monophasé';
                 } elseif ($response == 103) {
                     $type = 'triphasé';
                 }
-
-                if ($type !== null) {
-                    log::add('APSystemsSunspec', 'info', "Micro-onduleur détecté : ID $modbusId ($type)");
-                    $this->createChildEquipment($ip, $modbusId, $type, $timeout, $objectId);
+    
+                // Vérifier le modèle pour déterminer le nombre de PV (par défaut = 2)
+                $pv = 2;
+                if (strpos($responsemodel, 'YC1000') !== false || strpos($responsemodel, 'QS1') !== false || strpos($responsemodel, 'QT2') !== false) {
+                    $pv = 4;
                 }
-
+    
+                if ($type !== null) {
+                    log::add('APSystemsSunspec', 'info', "Micro-onduleur détecté : ID $modbusId ($type) - Modèle : $responsemodel - PV : $pv");
+                    $order++;
+                    $this->createChildEquipment($ip, $modbusId, $type, $timeout, $objectId, $order, $pv);
+                }
+    
                 $modbusId++;
             } catch (Exception $e) {
                 log::add('APSystemsSunspec', 'debug', "Erreur Modbus ID $modbusId : " . $e->getMessage());
+                if (isset($client)) {
+                    $client->close();
+                }
                 break;
             }
         }
@@ -723,22 +997,36 @@ class APSystemsSunspec extends eqLogic {
                 $client->setSlave($modbusId);
 
                 $data = [];
-                $firstBlock = $client->readHoldingRegisters(40002, 125);
+                $premReg = 40002;
+                $nbReg = 125;
+                $firstBlock = $client->readHoldingRegisters($premReg, $nbReg);
                 if ($firstBlock === false || empty($firstBlock)) {
                     throw new Exception("Aucune donnée reçue pour Modbus ID $modbusId (premier bloc)");
                 }
-                for ($i = 0; $i < 125; $i++) {
+                for ($i = 0; $i < $nbReg; $i++) {
                     $data[$i] = $firstBlock[$i];
                 }
 
-                $secondBlock = $client->readHoldingRegisters(40127, 31);
+                $premReg = 40002 + $nbReg;
+                $nbReg = 125;
+                $secondBlock = $client->readHoldingRegisters($premReg, $nbReg);
                 if ($secondBlock === false || empty($secondBlock)) {
                     throw new Exception("Aucune donnée reçue pour Modbus ID $modbusId (deuxième bloc)");
                 }
-                for ($i = 0; $i < 31; $i++) {
-                    $data[$i + 125] = $secondBlock[$i];
+                for ($i = 0; $i < $nbReg; $i++) {
+                    $data[$i + $nbReg] = $secondBlock[$i];
                 }
-
+/*
+                $premReg = $premReg + $nbReg;
+                $nbReg = 1;
+                $thirdBlock = $client->readHoldingRegisters($premReg, $nbReg);
+                if ($thirdBlock === false || empty($thirdBlock)) {
+                    throw new Exception("Aucune donnée reçue pour Modbus ID $modbusId (troisième bloc)");
+                }
+                for ($i = 0; $i < $nbReg; $i++) {
+                    $data[$i + $nbReg + 125] = $thirdBlock[$i];
+                }
+*/
                 $this->updateChildCommands($child, $data);
 
                 // Récupérer la puissance du micro-onduleur
@@ -821,7 +1109,7 @@ class APSystemsSunspec extends eqLogic {
             $nameCmd = $cmd->getName();
             $logicalId = $cmd->getLogicalId();
 
-            if ($registre < 40002 || $registre + $size - 1 > 40157) {
+            if ($registre < 40002 || $registre + $size - 1 > 40261) {
                 log::add('APSystemsSunspec', 'debug', "Registre $registre hors plage pour la commande {$cmd->getLogicalId()} (taille : $size)");
                 continue;
             }
@@ -855,8 +1143,54 @@ class APSystemsSunspec extends eqLogic {
                     $value = trim($value);
                 } elseif ($calcul == 'enum16') {
                     $value = $data[$index];
+                    switch ($value) {
+                        case 0:
+                            $value = 'Non défini';
+                            break;
+                        case 1:
+                            $value = 'OFF';
+                            break;
+                        case 2:
+                            $value = 'En sommeil';
+                            break;
+                        case 3:
+                            $value = 'Démarrage';
+                            break;
+                        case 4:
+                            $value = 'MPPT actif';
+                            break;
+                        case 5:
+                            $value = 'Puissance limitée';
+                            break;
+                        case 6:
+                            $value = 'Arrêt en cours';
+                            break;
+                        case 7:
+                            $value = 'Erreur';
+                            break;
+                        case 8: 
+                            $value = 'En veille';
+                            break;
+                        default:
+                            $value = 'État inconnu';
+                    }
                 } elseif ($calcul == 'bitfield32' && $size == 2) {
-                    $value = ($data[$index] << 16) + $data[$index + 1];
+                    $value_hex[0] = $data[$index];
+                    $value_hex[1] = $data[$index + 1];
+                    $value = '';
+                    $bitPosition = 0;
+                    // Convertir les valeurs hexadécimales en binaire
+                    for ($bit = 0; $bit < 16; $bit++) {
+                        $mask = 1 << $bit;
+                        $bitValue = ($value & $mask) ? 1 : 0;
+                        $value .= $this->decodeBitfield32($bitValue, $bitPosition);
+                        $bitPosition++;
+                    }
+                    if ($value = '') {
+                        $value = 'Aucun événement';
+                    } else {
+                        $value = rtrim($value);
+                    }
                 } else {
                     $value = $data[$index];
                     log::add('APSystemsSunspec', 'debug', "Type de calcul non spécifié pour la commande {$cmd->getLogicalId()}, utilisation de la valeur brute : $value");
@@ -887,14 +1221,21 @@ class APSystemsSunspec extends eqLogic {
         }
     }
 
-    private function createChildEquipment($ip, $modbusId, $type, $timeout = 3, $objectId = null) {
+    private function createChildEquipment($ip, $modbusId, $type, $timeout = 3, $objectId = null, $order = 0, $pv = 2) {
         $existingEqLogic = eqLogic::byLogicalId($ip . '_ID' . $modbusId, 'APSystemsSunspec');
         if (is_object($existingEqLogic)) {
             log::add('APSystemsSunspec', 'info', "Équipement déjà existant pour ID $modbusId, pas de création. Mise à jour des commandes si nécessaire.");
             $existingEqLogic->setConfiguration('timeout', $timeout);
             $existingEqLogic->setConfiguration('type', $type);
-            $existingEqLogic->checkAndCreateCommandsMO($type);
-            // Mettre à jour les commandes de l'ECU parent après la mise à jour de l'enfant
+            if (is_null($existingEqLogic->getConfiguration('nb_pv')) || !is_numeric($existingEqLogic->getConfiguration('nb_pv'))) {
+                $existingEqLogic->setConfiguration('nb_pv', $pv);
+            } else {
+                $pv = $existingEqLogic->getConfiguration('nb_pv');
+            }
+            $existingEqLogic->setOrder($order);
+            $existingEqLogic->checkAndCreateCommandsMO($type, $pv);
+            $existingEqLogic->save();
+            // Mettre à jour les commandes de l'ECU parent après la création de l'enfant
             $parent = eqLogic::byId($this->getId());
             if (is_object($parent)) {
                 $parent->checkAndCreateCommands();
@@ -909,7 +1250,9 @@ class APSystemsSunspec extends eqLogic {
         $newEqLogic->setConfiguration('ip', $ip);
         $newEqLogic->setConfiguration('modbus_id', $modbusId);
         $newEqLogic->setConfiguration('type', $type);
+        $newEqLogic->setConfiguration('nb_pv', $pv);
         $newEqLogic->setConfiguration('timeout', $timeout);
+        $newEqLogic->setOrder($order);
         if ($objectId) {
             $newEqLogic->setObject_id($objectId);
         }
@@ -918,7 +1261,7 @@ class APSystemsSunspec extends eqLogic {
         $newEqLogic->setIsEnable(1);
         $newEqLogic->save();
 
-        $newEqLogic->checkAndCreateCommandsMO($type);
+        $newEqLogic->checkAndCreateCommandsMO($type, $pv);
         log::add('APSystemsSunspec', 'debug', "Équipement créé avec ID : " . $newEqLogic->getId());
         // Mettre à jour les commandes de l'ECU parent après la création de l'enfant
         $this->checkAndCreateCommands();
@@ -969,3 +1312,93 @@ class APSystemsSunspecCmd extends cmd {
         }
     }
 }
+
+
+/*     * **********************Fonctions locales*************************** */
+
+/* 
+function displayParams(){
+    // : Fonction de personnalisation des paramètres de l'équipement    
+    $return = array();
+    $return = array(
+    //------------ Général -------------
+    'Background'=>'transparent',
+    'inverterColor'=>'', // : Couleur des éléments de catégorie "onduleur" [ Exemple : #fffff, white]
+    'inverterColorTextIn'=>'', // : Couleur des textes internes a l'onduleur [ Exemple : #fffff, white]
+    'noGridColor'=> '', // : Couleur du logo "noGridColor" [ Exemple : #fffff, white]
+    'colorDanger'=>'red', // : Couleur des rectangles en cas de dépassement de puissance. (Défaut : red)
+    'blink'=>0, // : Active le clignotement du rectangle en cas de dépassement de puissance. (Défaut: 0)
+    'fontAlert'=>0, // : Applique la couleur 'colorDanger' au texte en cas de dépassement de puissance. (Défaut: 0)
+    'activateGauge'=>1, // : Active les gauges dans les rectangles. Pas oublier de renseigner les MaxPower (loadMaxPower, load1MaxPower, pv1Maxpower...) [ Défaut : 1 ]
+    'activateShadow'=>0, // : Active un shadow sur les textes dans les rectangles.(Permet d'avoir un contraste lors de l'utilisation des gauges) [ Défaut : 0 ]
+    'shadowStyle'=>'2px 2px 3px black', // : Style du shadow. [ défaut : 2px 2px 3px black ]
+    //------------ Solar ------------
+    'pv1Name'=>'PV1', // : Personnalisation du nom du Pv1. (Ex: Ouest, Nord, PV1 ...)
+    'pv1MaxPower'=>0, // : Puissance max du Pv1. (permet la gestion de la gauge et des alertes)
+    'pv2Name'=>'PV2', // : Personnalisation du nom du Pv2. (Ex: Ouest, Nord, PV2 ...)
+    'pv2MaxPower'=>0, // : Puissance max du Pv2. (permet la gestion de la gauge et des alertes)
+    'pv3Name'=>'PV3', // : Personnalisation du nom du Pv3. (Ex: Ouest, Nord, PV3 ...)
+    'pv3MaxPower'=>0, // : Puissance max du Pv3. (permet la gestion de la gauge et des alertes)
+    'pv4Name'=>'PV4', // : Personnalisation du nom du Pv4. (Ex: Ouest, Nord, PV4 ...)
+    'pv4MaxPower'=>0, // : Puissance max du Pv4. (permet la gestion de la gauge et des alertes)
+    'pv5Name'=>'PV5', // : Personnalisation du nom du Pv5. (Ex: Ouest, Nord, PV5 ...)
+    'pv5MaxPower'=>0, // : Puissance max du Pv5. (permet la gestion de la gauge et des alertes)
+    'pv6Name'=>'PV6', // : Personnalisation du nom du Pv6. (Ex: Ouest, Nord, PV6 ...)
+    'pv6MaxPower'=>0, // : Puissance max du Pv6. (permet la gestion de la gauge et des alertes)
+    'pv7Name'=>'PV7', // : Personnalisation du nom du Pv7. (Ex: Ouest, Nord, PV7 ...)
+    'pv7MaxPower'=>0, // : Puissance max du Pv7. (permet la gestion de la gauge et des alertes)
+    'pv8Name'=>'PV8', // : Personnalisation du nom du Pv8. (Ex: Ouest, Nord, PV8 ...)
+    'pv8MaxPower'=>0, // : Puissance max du Pv8. (permet la gestion de la gauge et des alertes)
+    'dailySolarText'=>'DAILY SOLAR', // : Personnalisation du texte. (défaut : DAILY SOLAR);
+    'pvMaxPower'=>0, // : Puissance max des PV. (permet la gestion, de la vitesse de l'animation, de la gauge et des alertes)
+    'solarColor'=>'', // : Couleur des éléments de catégorie "solaire" [ Exemple : #fffff, white]
+    'pvState0Color'=>'', // : Couleur des éléments du pv si pas de production [ Exemple : #fffff, white | défaut : #solarColor#]
+    //------------ Load ------------
+    'load1Name'=>'Load1', // : Personnalisation du nom du Load1. (Ex: C.E, Clim, ...)
+    'load1Icon'=>'', // : Choix icône intègrée : Voir liste en bas.
+    'load1maxPower'=>0, // : Puissance Max (permet la gestion de la gauge et des alertes)
+    'load2Name'=>'Load2', // : Personnalisation du nom du Load2. (Ex: C.E, Clim, ...)
+    'load2Icon'=>'', // : Choix icône intègrée : Voir liste en bas.
+    'load2maxPower'=>0, // : Puissance Max (permet la gestion de la gauge et des alertes)
+    'load3Name'=>'Load3', // : Personnalisation du nom du Load3. (Ex: C.E, Clim, ...)
+    'load3Icon'=>'', // : Choix icône intègrée : Voir liste en bas.
+    'load3maxPower'=>0, // : Puissance Max (permet la gestion de la gauge et des alertes)
+    'load4Name'=>'Load4', // : Personnalisation du nom du Load4. (Ex: C.E, Clim, ...)
+    'load4Icon'=>'', // : Choix icône intègrée : Voir liste en bas.
+    'load4maxPower'=>0, // : Puissance Max (permet la gestion de la gauge et des alertes)
+    'force4Load'=>0, // : Force a 4 loads par colonne. (désactivé si utilisation de 7 PV ou plus !) [défaut : 0]
+    'dailyLoadText'=>'DAILY LOAD', // : Personnalisation du texte. (défaut : DAILY LOAD)
+    'loadMaxPower'=>0, // : Puissance max des équipements "Load". (permet la gestion, de la vitesse de l'animation, de la gauge et des alertes)
+    'loadColor'=>'', // : Couleur des éléments de catégorie "load" [ Exemple : #fffff, white]
+    'loadAnimate'=>1, // : Pour désactiver l'animation des Load passer ce paramètre a 0
+    'activateGaugeRatio'=>1, // : Passer ce paramètre a 0 pour désactiver la gauge ratio.
+    'sizeGaugeRatio'=>4, // : Taille de la gauge ratio. [ 1 a 10 | défaut : 4]
+    //------------ Grid ------------
+    'dailyGridSellText'=>'DAILY GRID SELL', // : Personnalisation du texte. (défaut : DAILY GRID SELL)
+    'dailyGridBuyText'=>'DAILY GRID BUY', // : Personnalisation du texte. (défaut : DAILY GRID BUY)
+    'gridMaxPower'=>0, // : Puissance max de consommation. (permet la gestion, de la vitesse de l'animation, de la gauge et des alertes)
+    'gridColor'=>'#5490c2', // : Couleur par défaut des éléments de catégorie "réseau" [ Exemple : #fffff, white | défaut : #5490c2 ]
+    'gridSellColor'=>'#5490c2', // : Couleur des éléments si en vente (injection). [ Exemple : #fffff, white | défaut : #5490c2 ]
+    'gridBuyColor'=>'#5490c2', // : Couleur des éléments si en achat (consommation). [ Exemple : #fffff, white | défaut : #5490c2 ]
+    //------------ Battery ------------
+    'dailyBatteryChargeText'=>'DAILY CHARGE', // : Personnalisation du texte. (défaut : DAILY CHARGE)
+    'dailyBatteryDischargeText'=>'DAILY DISCHARGE', // : Personnalisation du texte. (défaut : DAILY DISCHARGE)
+    'batteryMaxPower'=>0, // : Puissance max de la batterie. (permet la gestion, de la vitesse de l'animation, de la gauge et des alertes)
+    'batterySocShutdown'=>0, // : SOC mini. (defaut: 0)
+    'mpptName'=>'Chargeur PV', // : Personnalisation du nom du Chargeur PV.
+    'batteryColor'=>'pink', // : Couleur par défaut des éléments de catégorie "batterie". [ Exemple : #fffff, white | Défaut : pink]
+    'batteryStateColor'=>'pink', // : Couleur de l'état de charge et icône. [ Exemple : #fffff, white | Défaut : pink]
+    'batteryChargeColor'=>'pink', // : Couleur des éléments si en charge. [ Exemple : #fffff, white | Défaut : pink]
+    'batteryDischargeColor'=>'pink', // : Couleur des éléments si en décharge. [ Exemple : #fffff, white | Défaut : pink]
+    'batteryIcon'=>'', // : Choix icône intègrée (Voir liste en bas) ou image perso :
+    'batteryIconImage'=>'', // : Si batteryIcon est de type image, bien mettre le chemin jusqu'au fichier sans oublier l'extension.
+    'autoColorBattery'=>1, // : Auto coloration de l'état de charge et icône en fonction de l'état de charge. [ 0 = désactivé | Défaut : 1 ])
+    //------------ Aux ------------
+    'auxColor'=>'', // : Couleur des éléments de catégorie "aux" [ Exemple : #fffff, white]
+    'auxMaxPower'=>0, // : Puissance max des "Aux". (permet la gestion, de la vitesse de l'animation, de la gauge et des alertes)
+    //------------ Perso ------------
+    'perso1Param'=>'', // : Paramètre pour afficher une commande perso (il faut obligatoirement avoir créé la commande perso1_state)
+    );
+    return($return);
+}
+*/

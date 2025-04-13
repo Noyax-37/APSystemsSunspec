@@ -1,0 +1,15 @@
+renommer fichiers et répertoire avec "_APSystemsSunspec"
+
+Dans fichier "cmd.info.string.distribution_onduleur_APSystemsSunspec.html":
+- renommer "data/customTemplates/dashboard/cmd.info.string.distribution_onduleur" en "plugins/APSystemsSunspec/core/template/dashboard/cmd.info.string.distribution_onduleur_APSystemsSunspec"
+- renommer "cmds[j].name" en "cmds[j].configuration['widget']" (on prend l'info dans la config et plus dans le nom de la commande)
+
+Modifier l'entête:
+  <!-- ################ Distribution onduleur ################ 
+    Widget name : cmd.info.string.distribution_onduleur_APSystemsSunspec
+    Author : Phpvarious adapté au plugin par Noyax37
+    Inspiration : https://github.com/slipx06/sunsynk-power-flow-card/tree/master
+    Last Update : xxxx/xx/xx - Phpvarious
+  
+    version béta
+  -->

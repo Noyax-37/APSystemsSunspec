@@ -14,6 +14,67 @@
  * along with Jeedom. If not, see <http://www.gnu.org/licenses/>.
  */
 
+var liste_donnees = [{etiquette:"",name:""},
+  {etiquette:"",name:"-------- Configuration PV ---------"},
+  {etiquette:"pv_power",name:""},
+  {etiquette:"pv1_power",name:""},
+  {etiquette:"pv1_energy",name:""},
+  {etiquette:"pv1_voltage",name:""},
+  {etiquette:"pv1_current",name:""},
+  {etiquette:"pv2_power",name:""},
+  {etiquette:"pv2_energy",name:""},
+  {etiquette:"pv2_voltage",name:""},
+  {etiquette:"pv2_current",name:""},
+  {etiquette:"pv3_power",name:""},
+  {etiquette:"pv3_energy",name:""},
+  {etiquette:"pv3_voltage",name:""},
+  {etiquette:"pv3_current",name:""},
+  {etiquette:"pv4_power",name:""},
+  {etiquette:"pv4_energy",name:""},
+  {etiquette:"pv4_voltage",name:""},
+  {etiquette:"pv4_current",name:""},
+  {etiquette:"pv5_power",name:""},
+  {etiquette:"pv5_energy",name:""},
+  {etiquette:"pv5_voltage",name:""},
+  {etiquette:"pv5_current",name:""},
+  {etiquette:"daily_solar",name:""},
+  {etiquette:"",name:"-------- Configuration batterie ---------"},
+  {etiquette:"battery_state",name:""},
+  {etiquette:"battery_temp",name:""},
+  {etiquette:"battery_voltage",name:""},
+  {etiquette:"battery_current",name:""},
+  {etiquette:"battery_power",name:""},
+  {etiquette:"daily_battery_charge",name:""},
+  {etiquette:"daily_battery_discharge",name:""},
+  {etiquette:"battery_mppt_power",name:""},
+  {etiquette:"battery_mppt_energy",name:""},
+  {etiquette:"",name:"-------- Configuration Auxiliaire ---------"},
+  {etiquette:"aux_power",name:""},
+  {etiquette:"daily_aux",name:""},
+  {etiquette:"",name:"-------- Configuration réseau ---------"},
+  {etiquette:"daily_grid_buy",name:""},
+  {etiquette:"daily_grid_sell",name:""},
+  {etiquette:"grid_power",name:""},
+  {etiquette:"grid_status",name:""},
+  {etiquette:"",name:"-------- Configuration charge ---------"},
+  {etiquette:"daily_load",name:""},
+  {etiquette:"load_state",name:""},
+  {etiquette:"load1_state",name:""},
+  {etiquette:"load1_energy",name:""},
+  {etiquette:"load2_state",name:""},
+  {etiquette:"load2_energy",name:""},
+  {etiquette:"load3_state",name:""},
+  {etiquette:"load3_energy",name:""},
+  {etiquette:"load4_state",name:""},
+  {etiquette:"load4_energy",name:""},
+  {etiquette:"",name:"-------- Configuration onduleur ---------"},
+  {etiquette:"ac_temp",name:""},
+  {etiquette:"dc_temp",name:""},
+  {etiquette:"voltage_state",name:""},
+  {etiquette:"frequency_state",name:""},
+  {etiquette:"current_state",name:""},
+  {etiquette:"",name:""}];
+  
 /* Permet la réorganisation des commandes dans l'équipement */
 $("#table_cmd").sortable({
   axis: "y",
@@ -62,6 +123,22 @@ function addCmdToTable(_cmd) {
   tr += '</td>'
   tr += '<td class="hidden-xs">'
   tr += registretohex
+  tr += '</td>'
+  tr += '<td class="hidden-xs">'
+  
+  tr += '<input class="cmdAttr form-control input-sm roundedLeft" data-l1key="configuration" data-l2key="widget">';
+/*
+  tr += '<select class="cmdAttr form-control input-sm" data-l1key="configuration" data-l2key="widget">'
+  liste_donnees.forEach(function(element) {
+    if (element.etiquette == "") { 
+      tr += '<option value="' + element.etiquette + '">' + element.name + '</option>'
+    } else {
+      tr += '<option value="' + element.etiquette + '">' + element.etiquette + '</option>'
+    }
+  });
+  tr += '</select>'
+  tr += '</span>'
+*/  
   tr += '</td>'
   tr += '<td>';
   tr += '<label class="checkbox-inline"><input type="checkbox" class="cmdAttr" data-l1key="isVisible" checked/>{{Afficher}}</label> ';
@@ -172,6 +249,20 @@ $('.eqLogicAction[data-action=addAPSystemsSunspecEq]').off('click').on('click', 
 $(document).ready(function() {
   console.log('APSystemsSunspec.js chargé');
 
+  // Vérifier si l'équipement est un équipement fils ou père
+  var logicalId = $('.eqLogicAttr[data-l1key="logicalId"]').val();
+  console.log('logicalId : ', logicalId); // Débogage
+  // Vérifier si le logicalId contient '_ID' pour déterminer s'il s'agit d'un équipement fils
+  if (logicalId && logicalId.includes('_ID')) {
+    console.log('Équipement fils détecté, masquage des éléments père et affichage des éléments fils');
+    $('.ecu-container').hide();
+    $('.mo-container').show();
+  } else {
+    console.log('Équipement père détecté, affichage des éléments père et masquage des éléments fils');
+    $('.ecu-container').show();
+    $('.mo-container').hide();
+  }
+
   // Charger les données de l'équipement sélectionné
   $('.eqLogicDisplayCard').on('click', function() {
     var eqLogicId = $(this).data('eqlogic_id');
@@ -273,18 +364,12 @@ $(document).ready(function() {
     console.log('Vérification du logicalId : ', logicalId); // Débogage
     if (logicalId && logicalId.includes('_ID')) {
       console.log('Équipement fils détecté, masquage des éléments père et affichage des éléments fils');
-      $('.scan-button-container').hide();
-      $('.timeout-container').hide();
-      $('.refresh-tout-container').hide();
-      $('.raz_configInverter').show();
-      $('.autoRefresh-container').hide();
+      $('.ecu-container').hide();
+      $('.mo-container').show();
     } else {
       console.log('Équipement père détecté, affichage des éléments père et masquage des éléments fils');
-      $('.scan-button-container').show();
-      $('.timeout-container').show();
-      $('.refresh-tout-container').show();
-      $('.raz_configInverter').hide();
-      $('.autoRefresh-container').show();
+      $('.ecu-container').show();
+      $('.mo-container').hide();
     }
   }
 
