@@ -34,9 +34,15 @@ class APSystemsSunspec extends eqLogic {
         }
     }
 
-    public function postSave() {
+
+    public function postInsert() {
         // Appeler la création des commandes pour l'ECU
         $this->checkAndCreateCommands();
+    }
+            
+    public function postSave() {
+        // Appeler la création des commandes pour l'ECU
+        //$this->checkAndCreateCommands();
     
         $autorefresh = $this->getConfiguration('autorefresh', '');
         $id = $this->getId();
@@ -111,18 +117,25 @@ class APSystemsSunspec extends eqLogic {
     }    
     
     public function checkAndCreateCommands() {
-        if (strpos($this->getLogicalId(), '_ID') === false) {
+        
+        $checked = $GLOBALS['checked'] ?? false; // Initialize $checked if not already set
+        
+        if (strpos($this->getLogicalId(), '_ID') === false) { // Si c'est un ECU
 
             // Commande pour l'application du widget'
             $order = 1;
             $stateCmd = $this->getCmd(null, 'widget');
+            $newCmd = false;
             if (!is_object($stateCmd)) {
                 $stateCmd = new APSystemsSunspecCmd();
+                $newCmd = true;
             }
 
             $displayParam = displayParamsAPS();
 
-            $stateCmd->setName(__('Widget', __FILE__));
+            if ($newCmd || !$checked) {
+                $stateCmd->setName(__('Widget', __FILE__));
+            }
             $stateCmd->setEqLogic_id($this->getId());
             $stateCmd->setLogicalId('widget');
             $stateCmd->setType('info');
@@ -133,28 +146,17 @@ class APSystemsSunspec extends eqLogic {
             $stateCmd->setOrder($order);
             $stateCmd->save();
 
-            // Commande pour l'état global de l'ECU
-            $order++;
-            $stateCmd = $this->getCmd(null, 'state');
-            if (!is_object($stateCmd)) {
-                $stateCmd = new APSystemsSunspecCmd();
-            }
-            $stateCmd->setName(__('État', __FILE__));
-            $stateCmd->setEqLogic_id($this->getId());
-            $stateCmd->setLogicalId('state');
-            $stateCmd->setType('info');
-            $stateCmd->setSubType('binary');
-            $stateCmd->setConfiguration('widget', '');
-            $stateCmd->setOrder($order);
-            $stateCmd->save();
-
             // Commande pour la puissance totale
             $order++;
+            $newCmd = false;
             $powerCmd = $this->getCmd(null, 'power');
             if (!is_object($powerCmd)) {
                 $powerCmd = new APSystemsSunspecCmd();
+                $newCmd = true;
             }
-            $powerCmd->setName(__('Puissance totale', __FILE__));
+            if ($newCmd || !$checked) {
+                $powerCmd->setName(__('Puissance totale', __FILE__));
+            }
             $powerCmd->setEqLogic_id($this->getId());
             $powerCmd->setLogicalId('power');
             $powerCmd->setType('info');
@@ -166,11 +168,15 @@ class APSystemsSunspec extends eqLogic {
 
             // Commande pour l'énergie totale
             $order++;
+            $newCmd = false;
             $energyCmd = $this->getCmd(null, 'totalEnergy');
             if (!is_object($energyCmd)) {
                 $energyCmd = new APSystemsSunspecCmd();
+                $newCmd = true;
             }
-            $energyCmd->setName(__('Énergie totale', __FILE__));
+            if ($newCmd || !$checked) {
+                $energyCmd->setName(__('Énergie totale', __FILE__));
+            }
             $energyCmd->setEqLogic_id($this->getId());
             $energyCmd->setLogicalId('totalEnergy');
             $energyCmd->setType('info');
@@ -180,13 +186,36 @@ class APSystemsSunspec extends eqLogic {
             $energyCmd->setOrder($order);
             $energyCmd->save();
 
+            // Commande pour l'état global de l'ECU
+            $order++;
+            $newCmd = false;
+            $stateCmd = $this->getCmd(null, 'state');
+            if (!is_object($stateCmd)) {
+                $stateCmd = new APSystemsSunspecCmd();
+                $newCmd = true;
+            }
+            if ($newCmd || !$checked) {
+                $stateCmd->setName(__('État', __FILE__));
+            }
+            $stateCmd->setEqLogic_id($this->getId());
+            $stateCmd->setLogicalId('state');
+            $stateCmd->setType('info');
+            $stateCmd->setSubType('binary');
+            $stateCmd->setConfiguration('widget', '');
+            $stateCmd->setOrder($order);
+            $stateCmd->save();
+            
             // Commande pour le rafraîchissement manuel
             $order2 = 1000;
+            $newCmd = false;
             $refreshCmd = $this->getCmd(null, 'refresh');
             if (!is_object($refreshCmd)) {
                 $refreshCmd = new APSystemsSunspecCmd();
+                $newCmd = true;
             }
-            $refreshCmd->setName(__('Rafraîchir', __FILE__));
+            if ($newCmd || !$checked) {
+                $refreshCmd->setName(__('Rafraîchir', __FILE__));
+            }
             $refreshCmd->setEqLogic_id($this->getId());
             $refreshCmd->setLogicalId('refresh');
             $refreshCmd->setType('action');
@@ -259,11 +288,15 @@ class APSystemsSunspec extends eqLogic {
         } else {
             // Si c'est un micro-onduleur
             // Commande pour l'état
+            $newCmd = false;
             $stateCmd = $this->getCmd(null, 'state');
             if (!is_object($stateCmd)) {
                 $stateCmd = new APSystemsSunspecCmd();
+                $newCmd = true;
             }
-            $stateCmd->setName(__('État', __FILE__));
+            if ($newCmd || !$checked) {
+                $stateCmd->setName(__('État', __FILE__));
+            }
             $stateCmd->setEqLogic_id($this->getId());
             $stateCmd->setLogicalId('state');
             $stateCmd->setType('info');
@@ -271,12 +304,16 @@ class APSystemsSunspec extends eqLogic {
             $stateCmd->setOrder(2);
             $stateCmd->save();
 
+            $newCmd = false;
             $displayParam = displayParamsAPS();
             $stateCmdWid = $this->getCmd(null, 'widget');
             if (!is_object($stateCmdWid)) {
                 $stateCmdWid = new APSystemsSunspecCmd();
+                $newCmd = true;
             }
-            $stateCmdWid->setName(__('Widget', __FILE__));
+            if ($newCmd || !$checked) {
+                $stateCmdWid->setName(__('Widget', __FILE__));
+            }
             $stateCmdWid->setEqLogic_id($this->getId());
             $stateCmdWid->setLogicalId('widget');
             $stateCmdWid->setType('info');
@@ -294,14 +331,19 @@ class APSystemsSunspec extends eqLogic {
 
     public function createCommand($logicalId, $name, $type, $subType, $unit = '', $registre = 0, $calcul = '', $size = 1, $order = 1, $coef = 0, $isVisible = 1, $widget = '') {
         $cmd = $this->getCmd(null, $logicalId);
+        $newCmd = false;
         if (!is_object($cmd)) {
             log::add('APSystemsSunspec', 'debug', 'Création de la commande : ' . $name);
             $cmd = new APSystemsSunspecCmd();
             $cmd->setLogicalId($logicalId);
+            $newCmd = true;
         } else {
             log::add('APSystemsSunspec', 'debug', 'Mise à jour de la commande : ' . $name);
         }
-        $cmd->setName(__($name, __FILE__));
+        $checked = $GLOBALS['checked'] ?? false; // Initialize $checked if not already set
+        if (!$checked || $newCmd) {
+            $cmd->setName($name);
+        }
         $cmd->setEqLogic_id($this->getId());
         $cmd->setType($type);
         $cmd->setSubType($subType);
@@ -661,52 +703,52 @@ class APSystemsSunspec extends eqLogic {
         if ($decode == 1) {
             switch ($bitfield) {
                 case 0:
-                    $return = 'Aucun événement';
+                    $return = 'Défaut à la terre';
                     break;
                 case 1:
-                    $return = '1 ';
+                    $return = 'Survoltage DC';
                     break;
                 case 2:
-                    $return = '2 ';
+                    $return = 'AC déconnecté';
                     break;
                 case 3:
-                    $return = '3 ';
+                    $return = 'DC déconnecté';
                     break;
                 case 4:
-                    $return = '4 ';
+                    $return = 'GRID déconnecté';
                     break;
                 case 5:
-                    $return = '5 ';
+                    $return = 'Boitier ouvert';
                     break;
                 case 6:
-                    $return = '6';
+                    $return = 'Extinction manuelle';
                     break;
                 case 7:
-                    $return = '7 ';
+                    $return = 'Surchauffe';
                     break;
                 case 8:
-                    $return = '8 ';
+                    $return = 'Fréquence trop élevée';
                     break;
                 case 9:
-                    $return = '9 ';
+                    $return = 'Fréquence trop basse';
                     break;
                 case 10:
-                    $return = '10 ';
+                    $return = 'Tension AC trop élevée';
                     break;
                 case 11:
-                    $return = '11 ';
+                    $return = 'Tension AC trop basse';
                     break;
                 case 12:
-                    $return = '12 ';
+                    $return = "Fusible de chaîne grillé à l'entrée";
                     break;
                 case 13:    
-                    $return = '13 ';
+                    $return = 'Température trop basse';
                     break;
                 case 14:
-                    $return = '14 ';
+                    $return = "Mémoire 'perdue'";
                     break;
                 case 15:
-                    $return = '15 ';
+                    $return = 'Test hardware défectueux';
                     break;
                 case 16:
                     $return = '16 ';
@@ -759,16 +801,19 @@ class APSystemsSunspec extends eqLogic {
                 default:
                     $return = '';
             }
+        } else {
+            $return = '';
         }
         return $return;
     }
 
-    public function scanMicroInverters($objectId = null) {
+    public function scanMicroInverters($objectId = null, $ifChecked = false) {
         $ip = $this->getLogicalId();
         $timeout = $this->getConfiguration('timeout', 3);
         $modbusId = 1;
         $maxAttempts = 247;
         $order = $this->getOrder();
+        $GLOBALS['checked'] = $ifChecked;
     
         log::add('APSystemsSunspec', 'info', "Début du scan pour IP : $ip (ID équipement : " . $this->getId() . ")");
         while ($modbusId <= $maxAttempts) {
@@ -1207,10 +1252,17 @@ class APSystemsSunspec extends eqLogic {
                     // Convertir les valeurs hexadécimales en binaire
                     for ($bit = 0; $bit < 16; $bit++) {
                         $mask = 1 << $bit;
-                        $bitValue = ($value & $mask) ? 1 : 0;
+                        $bitValue = ($value_hex[0] & $mask) ? 1 : 0;
                         $value .= $this->decodeBitfield32($bitValue, $bitPosition);
                         $bitPosition++;
                     }
+                    for ($bit = 0; $bit < 16; $bit++) {
+                        $mask = 1 << $bit;
+                        $bitValue = ($value_hex[1] & $mask) ? 1 : 0;
+                        $value .= $this->decodeBitfield32($bitValue, $bitPosition + 16);
+                        $bitPosition++;
+                    }
+                    log::add('APSystemsSunspec', 'debug', "Valeur décodée pour la commande {$cmd->getLogicalId()} : $value");
                     if ($value = '') {
                         $value = 'Aucun événement';
                     } else {

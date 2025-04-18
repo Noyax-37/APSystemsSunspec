@@ -93,10 +93,10 @@ function addCmdToTable(_cmd) {
   if (!isset(_cmd.configuration)) {
     _cmd.configuration = {};
   }
-  var registretohex = '0x0000';
+  var registretohex = '{{non valable}}';
   var registre = parseInt(_cmd.configuration.registre);
   if (isNaN(registre)) {
-    registre = 0;
+    registre = '{{non valable}}';
   }else {
     var registretohex = '0x' + (registre.toString(16).padStart(4, '0'))
   }
@@ -118,7 +118,7 @@ function addCmdToTable(_cmd) {
   tr += '<span class="type" type="' + init(_cmd.type) + '">' + jeedom.cmd.availableType() + '</span>';
   tr += '<span class="subType" subType="' + init(_cmd.subType) + '"></span>';
   tr += '</td>';
-  tr += '<td class="hidden-xs">'
+  tr += '<td class="hidden-xs">';
   tr += registre
   tr += '</td>'
   tr += '<td class="hidden-xs">'
@@ -294,6 +294,8 @@ $(document).ready(function() {
     console.log('Clic sur Scan des micro-onduleurs');
     var eqLogicId = $('.eqLogicAttr[data-l1key="id"]').val();
     var objectId = $('.eqLogicAttr[data-l1key="object_id"]').val();
+    var ifChecked = $('#scanMicroInvertersCheck').is(':checked');
+    console.log('Scan des micro-onduleurs, ID : ' + eqLogicId + ', Object ID : ' + objectId + ', Checked : ' + ifChecked);
     if (!eqLogicId) {
       console.log('Erreur : Aucun ID trouvé');
       $('#div_alert').showAlert({ message: '{{Aucun équipement sélectionné}}', level: 'danger' });
@@ -306,7 +308,8 @@ $(document).ready(function() {
       data: {
         action: 'scanMicroInverters',
         id: eqLogicId,
-        obj: objectId
+        obj: objectId,
+        check: ifChecked
       },
       dataType: 'json',
       error: function(request, status, error) {

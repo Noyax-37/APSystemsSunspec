@@ -180,7 +180,10 @@ function displayActionCard($action_name, $fa_icon, $action = '', $class = '') {
 									<div class="col-sm-2">
 										<a class="btn btn-primary scan-button" id="scanMicroInverters"><i class="fa fa-search"></i> {{Scan des micro-onduleurs}}</a>
 									</div>
-                                    <label class="col-sm-6">{{Ne fonctionnera pas si vous êtes dans un MO}}</label>
+                                    <div class="col-sm-6">
+                                        <label class="checkbox-inline"><input type="checkbox" class="scan-button" id="scanMicroInvertersCheck" checked>{{ conserver le nom des commandes}}</label>
+                                        <sup><i class="fas fa-question-circle tooltips" title="{{Dans le cas d'une mise à jour, si vous voulez conserver les noms personnalisés qui vous avez affecté aux commandes}}"></i></sup>
+                                    </div>
 								</div>
                             </div>
                             <div class="form-group ecu-container">
