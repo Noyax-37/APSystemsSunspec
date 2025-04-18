@@ -150,7 +150,7 @@ function displayActionCard($action_name, $fa_icon, $action = '', $class = '') {
                                     <input type="text" class="eqLogicAttr form-control" data-l1key="logicalId" placeholder="{{Adresse IP de l'ECU}}" readonly />
                                 </div>
                             </div>
-                            <div class="form-group timeout-container">
+                            <div class="form-group ecu-container">
                                 <label class="col-sm-4 control-label">{{Timeout}}
                                     <sup><i class="fas fa-question-circle tooltips" title="{{A ajuster si vous avez des soucis de connexion}}"></i></sup>
                                 </label>
@@ -158,7 +158,7 @@ function displayActionCard($action_name, $fa_icon, $action = '', $class = '') {
                                     <input type="number" class="eqLogicAttr form-control" data-l1key="configuration" data-l2key="timeout" placeholder="3" min="1" max="30" />
                                 </div>
                             </div>
-							<div class="form-group autoRefresh-container">
+							<div class="form-group ecu-container">
 								<label class="col-sm-4 control-label">{{Auto-actualisation}}
 									<sup><i class="fas fa-question-circle tooltips" title="{{Fréquence de rafraîchissement des commandes infos des MO}}"></i></sup>
 								</label>
@@ -174,34 +174,45 @@ function displayActionCard($action_name, $fa_icon, $action = '', $class = '') {
                                 </div>
                             </div>
 
-                            <div class="form-group">
-								<div class="form-group scan-button-container">
+                            <div class="form-group ecu-container">
+								<div class="form-group">
 									<label class="col-sm-4 control-label">{{Scan pour ajouter ou mettre à jour les MO de l'ECU}}</label>
 									<div class="col-sm-2">
 										<a class="btn btn-primary scan-button" id="scanMicroInverters"><i class="fa fa-search"></i> {{Scan des micro-onduleurs}}</a>
 									</div>
-                                    <label class="col-sm-6">{{Ne fonctionnera pas si vous êtes dans un MO}}</label>
+                                    <div class="col-sm-6">
+                                        <label class="checkbox-inline"><input type="checkbox" class="scan-button" id="scanMicroInvertersCheck" checked>{{ conserver le nom des commandes}}</label>
+                                        <sup><i class="fas fa-question-circle tooltips" title="{{Dans le cas d'une mise à jour, si vous voulez conserver les noms personnalisés qui vous avez affecté aux commandes}}"></i></sup>
+                                    </div>
 								</div>
                             </div>
-                            <div class="form-group">
-								<div class="form-group refresh-tout-container">
+                            <div class="form-group ecu-container">
+								<div class="form-group">
 									<label class="col-sm-4 control-label">{{MAJ toutes les données ECU}}</label>
 									<div class="col-sm-6">
 										<a class="btn btn-warning refresh-tout-button" id="refreshToutECU"><i class="fas fa-cogs"></i> {{Refresh tout de l'ECU}}</a>
 									</div>
 								</div>
                             </div>
-                            <div class="form-group">
+                            <div class="form-group ecu-container">
                                 <label class="col-sm-4 control-label">{{Heure de début d'arrêt de l'interrogation (HH:MM)}}</label>
                                 <div class="col-sm-2">
                                     <input type="text" class="eqLogicAttr form-control" data-l1key="configuration" data-l2key="stopPollingStart" placeholder="22:00" />
                                 </div>
                                 <label class="col-sm-6">{{Ne rien mettre dans ces 2 champs si vous ne voulez pas interrompre l'interrogation}}</label>
                             </div>
-                            <div class="form-group">
+                            <div class="form-group ecu-container">
                                 <label class="col-sm-4 control-label">{{Heure de fin d'arrêt de l'interrogation (HH:MM)}}</label>
                                 <div class="col-sm-2">
                                     <input type="text" class="eqLogicAttr form-control" data-l1key="configuration" data-l2key="stopPollingEnd" placeholder="06:00" />
+                                </div>
+                            </div>
+                            <div class="form-group mo-container">
+                                <label class="col-sm-4 control-label">{{Nombre de PV installés }}
+                                    <sup><i class="fas fa-question-circle tooltips" title="{{A ajuster si ce qui est proposé n'est pas juste}}"></i></sup>
+                                </label>
+                                <div class="col-sm-6">
+                                    <input type="number" class="eqLogicAttr form-control" data-l1key="configuration" data-l2key="nb_pv" placeholder="2" min="0" max="8" />
                                 </div>
                             </div>
                         </div>
@@ -231,6 +242,7 @@ function displayActionCard($action_name, $fa_icon, $action = '', $class = '') {
 								<th>{{Type}}</th>
 								<th>{{Registre (en décimal)}}</th>
 								<th>{{Registre (en héxadécimal)}}</th>
+								<th><li><a target='_blank' href='https://phpvarious.github.io/documentation/widget/fr_FR/widget_scenario/distribution_onduleur/'>{{Utilisation dans widget (aide: cliquez ici)}}</a></li></th>
 								<th style="min-width:260px;">{{Options}}</th>
 								<th>{{Etat}}</th>
 								<th style="min-width:80px;width:200px;">{{Actions}}</th>
