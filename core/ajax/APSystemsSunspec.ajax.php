@@ -11,7 +11,12 @@ try {
         $eqLogicId = init('id');
         $objectId = init('obj');
         $ifchecked = init('check');
+        $uniqueId = init('uniqueId');
+        $unique = init('unique');
         log::add('APSystemsSunspec', 'debug', 'ID reçu pour scan : ' . ($eqLogicId ? $eqLogicId : 'null'));
+        if ($unique) {
+            log::add('APSystemsSunspec', 'debug', 'ID unique reçu pour scan : ' . ($uniqueId ? $uniqueId : 'null'));
+        }
         if (!$eqLogicId) {
             throw new Exception(__('ID de l\'équipement non fourni', __FILE__));
         }
@@ -19,7 +24,7 @@ try {
         if (!is_object($eqLogic)) {
             throw new Exception(__('EqLogic inconnu. Vérifier l\'ID : ', __FILE__) . $eqLogicId);
         }
-        $eqLogic->scanMicroInverters($objectId, $ifchecked);
+        $eqLogic->scanMicroInverters($objectId, $ifchecked, $unique, $uniqueId);
         ajax::success();
     }
 

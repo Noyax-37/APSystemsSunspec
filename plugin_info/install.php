@@ -45,6 +45,7 @@ function APSystemsSunspec_update() {
 
     message::removeAll('APSystemsSunspec');
     message::add('APSystemsSunspec', sprintf(__("Installation du plugin APSystemsSunspec terminée, vous êtes en version %s", __FILE__), $core_version));
+    message::add('APSystemsSunspec', sprintf(__("Il est fortement conseillé de mettre à jour les paramètres de tous les équipements en cliquant sur « scan des micro-onduleurs » de chaque ECU (si vous en avez plusieurs)", __FILE__), $core_version));
 }
 
 // Fonction exécutée automatiquement après la suppression du plugin

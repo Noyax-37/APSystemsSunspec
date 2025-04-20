@@ -49,7 +49,7 @@ function displayActionCard($action_name, $fa_icon, $action = '', $class = '') {
                     }
                     ?>
                 </div>
-                <legend><i class="fas fa-table"></i> {{Mes ECU}}</legend>
+                <legend><i class="fas fa-table"></i> {{Mes ECU et Micro-onduleurs associés}}</legend>
                 <?php
                 if (count($eqLogics) == 0) {
                     echo '<br><div class="text-center" style="font-size:1.2em;font-weight:bold;">{{Aucun équipement ECU APSystems trouvé, cliquer sur "Ajouter" pour commencer}}</div>';
@@ -181,8 +181,22 @@ function displayActionCard($action_name, $fa_icon, $action = '', $class = '') {
 										<a class="btn btn-primary scan-button" id="scanMicroInverters"><i class="fa fa-search"></i> {{Scan des micro-onduleurs}}</a>
 									</div>
                                     <div class="col-sm-6">
-                                        <label class="checkbox-inline"><input type="checkbox" class="scan-button" id="scanMicroInvertersCheck" checked>{{ conserver le nom des commandes}}</label>
-                                        <sup><i class="fas fa-question-circle tooltips" title="{{Dans le cas d'une mise à jour, si vous voulez conserver les noms personnalisés qui vous avez affecté aux commandes}}"></i></sup>
+                                        <label class="checkbox-inline"><input type="checkbox" class="scan-check" id="scanMicroInvertersCheck" checked>{{ conserver le nom des commandes}}</label>
+                                        <sup><i class="fas fa-question-circle tooltips" title="{{Dans le cas d'une mise à jour, si vous voulez conserver les noms personnalisés qui vous avez affectés aux commandes}}"></i></sup>
+                                    </div>
+                                </div>
+                                <div class="form-group">
+                                    <label class="col-sm-4 control-label">{{ }}</label>
+                                    <label class="col-sm-4">{{Nécessaire uniquement dans le cas d'un nouvel MO:}}</label>
+                                </div>
+                                <div class="form-group">
+                                <label class="col-sm-4 control-label">{{ }}</label>
+                                    <div class="col-sm-2">
+                                        <label class="checkbox-inline"><input type="checkbox" class="scan-check-unique" id="scanUnique">{{ Scanner un ID unique : }}</label>
+                                        <sup><i class="fas fa-question-circle tooltips" title="{{Cocher cette case s'il y a des 'trous' dans la suite des ID à scanner et compléter la case ci contre}}"></i></sup>
+                                    </div>
+                                    <div class="col-sm-2">
+                                        <input type="text" class="form-control" id="scanUniqueId" placeholder="{{ID du MO à scanner}}" />
                                     </div>
 								</div>
                             </div>
@@ -207,12 +221,61 @@ function displayActionCard($action_name, $fa_icon, $action = '', $class = '') {
                                     <input type="text" class="eqLogicAttr form-control" data-l1key="configuration" data-l2key="stopPollingEnd" placeholder="06:00" />
                                 </div>
                             </div>
+                            <!-- Nombre de PV installés -->
                             <div class="form-group mo-container">
                                 <label class="col-sm-4 control-label">{{Nombre de PV installés }}
                                     <sup><i class="fas fa-question-circle tooltips" title="{{A ajuster si ce qui est proposé n'est pas juste}}"></i></sup>
                                 </label>
                                 <div class="col-sm-6">
                                     <input type="number" class="eqLogicAttr form-control" data-l1key="configuration" data-l2key="nb_pv" placeholder="2" min="0" max="8" />
+                                </div>
+                            </div>
+
+                            <!-- Conteneur pour les champs de puissance maximale -->
+                            <div class="form-group mo-container pv-max-power-container" style="display: none;">
+                                <label class="col-sm-4 control-label">{{Puissance maximale des PV (W)}}</label>
+                                <div class="col-sm-6" id="pvMaxPowerFields">
+                                    <!-- Champs de puissance maximale pour chaque PV -->
+                                    <div class="col-sm-12 input-group-pv1">
+                                        <span class="col-sm-2 input-group-pv1-addon">PV1 : </span>
+                                        <input type="number" class="col-sm-2 eqLogicAttr form-control" data-l1key="configuration" data-l2key="pvMaxPower1" min="0" max="10000" />
+                                        <span class="col-sm-2 input-group-pv1-addon">W</span>
+                                    </div>
+                                    <div class="col-sm-12 input-group-pv2">
+                                        <span class="col-sm-2 input-group-pv2-addon">PV2 : </span>
+                                        <input type="number" class="col-sm-2 eqLogicAttr form-control" data-l1key="configuration" data-l2key="pvMaxPower2" min="0" max="10000" />
+                                        <span class="col-sm-2 input-group-pv2-addon">W</span>
+                                    </div>
+                                    <div class="col-sm-12 input-group-pv3">
+                                        <span class="col-sm-2 input-group-pv3-addon">PV3 : </span>
+                                        <input type="number" class="col-sm-2 eqLogicAttr form-control" data-l1key="configuration" data-l2key="pvMaxPower3" min="0" max="10000" />
+                                        <span class="col-sm-2 input-group-pv3-addon">W</span>
+                                    </div>
+                                    <div class="col-sm-12 input-group-pv4">
+                                        <span class="col-sm-2 input-group-pv4-addon">PV4 : </span>
+                                        <input type="number" class="col-sm-2 eqLogicAttr form-control" data-l1key="configuration" data-l2key="pvMaxPower4" min="0" max="10000" />
+                                        <span class="col-sm-2 input-group-pv4-addon">W</span>
+                                    </div>
+                                    <div class="col-sm-12 input-group-pv5">
+                                        <span class="col-sm-2 input-group-pv5-addon">PV5 : </span>
+                                        <input type="number" class="col-sm-2 eqLogicAttr form-control" data-l1key="configuration" data-l2key="pvMaxPower5" min="0" max="10000" />
+                                        <span class="col-sm-2 input-group-pv5-addon">W</span>
+                                    </div>
+                                    <div class="col-sm-12 input-group-pv6">
+                                        <span class="col-sm-2 input-group-pv6-addon">PV6 : </span>
+                                        <input type="number" class="col-sm-2 eqLogicAttr form-control" data-l1key="configuration" data-l2key="pvMaxPower6" min="0" max="10000" />
+                                        <span class="col-sm-2 input-group-pv6-addon">W</span>
+                                    </div>
+                                    <div class="col-sm-12 input-group-pv7">
+                                        <span class="col-sm-2 input-group-pv7-addon">PV7 : </span>
+                                        <input type="number" class="col-sm-2 eqLogicAttr form-control" data-l1key="configuration" data-l2key="pvMaxPower7" min="0" max="10000" />
+                                        <span class="col-sm-2 input-group-pv7-addon">W</span>
+                                    </div>
+                                    <div class="col-sm-12 input-group-pv8">
+                                        <span class="col-sm-2 input-group-pv8-addon">PV8 : </span>
+                                        <input type="number" class="col-sm-2 eqLogicAttr form-control" data-l1key="configuration" data-l2key="pvMaxPower8" min="0" max="10000" />
+                                        <span class="col-sm-2 input-group-pv8-addon">W</span>
+                                    </div>
                                 </div>
                             </div>
                         </div>

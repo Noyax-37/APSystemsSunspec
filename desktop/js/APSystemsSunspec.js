@@ -95,7 +95,7 @@ function addCmdToTable(_cmd) {
   }
   var registretohex = '{{non valable}}';
   var registre = parseInt(_cmd.configuration.registre);
-  if (isNaN(registre)) {
+  if (isNaN(registre) || registre ==0) {
     registre = '{{non valable}}';
   }else {
     var registretohex = '0x' + (registre.toString(16).padStart(4, '0'))
@@ -257,10 +257,12 @@ $(document).ready(function() {
     console.log('Équipement fils détecté, masquage des éléments père et affichage des éléments fils');
     $('.ecu-container').hide();
     $('.mo-container').show();
+    $('.pv-max-power-container').show();
   } else {
     console.log('Équipement père détecté, affichage des éléments père et masquage des éléments fils');
     $('.ecu-container').show();
     $('.mo-container').hide();
+    $('.pv-max-power-container').hide();
   }
 
   // Charger les données de l'équipement sélectionné
@@ -295,7 +297,17 @@ $(document).ready(function() {
     var eqLogicId = $('.eqLogicAttr[data-l1key="id"]').val();
     var objectId = $('.eqLogicAttr[data-l1key="object_id"]').val();
     var ifChecked = $('#scanMicroInvertersCheck').is(':checked');
-    console.log('Scan des micro-onduleurs, ID : ' + eqLogicId + ', Object ID : ' + objectId + ', Checked : ' + ifChecked);
+    var unique = $('#scanUnique').is(':checked');
+    var uniqueId = $('#scanUniqueId').val();
+    if (unique) {
+      if (uniqueId === '') {
+        console.log('Erreur : Aucun ID unique trouvé');
+        $('#div_alert').showAlert({ message: '{{Aucun ID unique trouvé}}', level: 'danger' });
+        return;
+      }
+    }
+
+    console.log('Scan des micro-onduleurs, ID : ' + eqLogicId + ', Object ID : ' + objectId + ', Checked : ' + ifChecked + ', Unique : ' + unique + ', Unique ID : ' + uniqueId);
     if (!eqLogicId) {
       console.log('Erreur : Aucun ID trouvé');
       $('#div_alert').showAlert({ message: '{{Aucun équipement sélectionné}}', level: 'danger' });
@@ -309,7 +321,9 @@ $(document).ready(function() {
         action: 'scanMicroInverters',
         id: eqLogicId,
         obj: objectId,
-        check: ifChecked
+        check: ifChecked,
+        unique: unique,
+        uniqueId: uniqueId
       },
       dataType: 'json',
       error: function(request, status, error) {
