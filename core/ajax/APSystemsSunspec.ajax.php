@@ -14,7 +14,7 @@ try {
         $uniqueId = init('uniqueId');
         $unique = init('unique');
         log::add('APSystemsSunspec', 'debug', 'ID reçu pour scan : ' . ($eqLogicId ? $eqLogicId : 'null'));
-        if ($unique) {
+        if ($unique == 'true') {
             log::add('APSystemsSunspec', 'debug', 'ID unique reçu pour scan : ' . ($uniqueId ? $uniqueId : 'null'));
         }
         if (!$eqLogicId) {
