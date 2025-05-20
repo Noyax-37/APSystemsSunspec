@@ -1,0 +1,73 @@
+<div class="cmd cmd-widget" data-type="action" data-subtype="slider" data-template="button" data-cmd_id="#id#" data-cmd_uid="#uid#" data-version="#version#" data-eqLogic_id="#eqLogic_id#">
+	<div class="title #hide_name#">
+		<div class="cmdName">#name_display#</div>
+	</div>
+	<div class="content-sm ">
+		<div class="input-group buttons">
+			<span class="input-group-btn" style="position: relative;">
+				<a class="btn btn-default btn-sm bt_minusminus"><i class="fas fa-minus" style="font-size:1.5em;"></i></a><a class="btn btn-default btn-sm bt_minus"><i class="fas fa-minus"></i></a>
+			</span>
+			<input style="width:80px;text-align:center" type="text" class="input-sm in_value form-control" value="#state# #unite#" disabled/>
+			<span class="input-group-btn" style="position: relative;">
+				<a class="btn btn-default btn-sm bt_plus"><i class="fa fa-plus"></i></a><a class="btn btn-default btn-sm bt_plusplus"><i class="fa fa-plus" style="font-size:1.5em;"></i></a>
+			</span>
+		</div>
+	</div>
+	<script>
+	//if ('#big_change#'.toLowerCase() == 'oui') {$('.cmd[data-cmd_uid=#uid#] .bt_minusminus').show();} else {$('.cmd[data-cmd_uid=#uid#] .bt_minusminus').hide();}
+	//if ('#big_change#'.toLowerCase() == 'oui') {$('.cmd[data-cmd_uid=#uid#] .bt_plusplus').show();} else {$('.cmd[data-cmd_uid=#uid#] .bt_plusplus').hide();}
+
+	var step = 1; //(domUtils.issetWidgetOptParam('#step#', 'step')) ? parseFloat('#step#') : 1;
+
+    document.querySelector('.cmd[data-cmd_uid="#uid#"] .bt_plusplus').addEventListener('click', function() {
+		let input = document.querySelector('.cmd[data-cmd_uid="#uid#"] .in_value');
+		let step = 10;
+		let value = parseFloat(input.value.replace("#unite#", "").replace(" ", "")) + step;
+		if (value > parseFloat('#maxValue#')) {value = parseFloat('#maxValue#')};
+		input.value = value + ' #unite#';
+		clearTimeout(window['timerHandle#id#']);
+		window['timerHandle#id#'] = setTimeout(function() {
+			jeedom.cmd.execute({id:'#id#', value:{slider:value}});
+		}, 1000);
+	});
+
+    document.querySelector('.cmd[data-cmd_uid="#uid#"] .bt_plus').addEventListener('click', function() {
+		let input = document.querySelector('.cmd[data-cmd_uid="#uid#"] .in_value');
+		let value = parseFloat(input.value.replace("#unite#", "").replace(" ", "")) + step;
+		if (value > parseFloat('#maxValue#')) {value = parseFloat('#maxValue#')};
+		input.value = value + ' #unite#';
+		clearTimeout(window['timerHandle#id#']);
+		window['timerHandle#id#'] = setTimeout(function() {
+			jeedom.cmd.execute({id:'#id#', value:{slider:value}});
+		}, 1000);
+	});
+
+    document.querySelector('.cmd[data-cmd_uid="#uid#"] .bt_minus').addEventListener('click', function() {
+		let input = document.querySelector('.cmd[data-cmd_uid="#uid#"] .in_value');
+		let value = parseFloat(input.value.replace("#unite#", "").replace(" ", "")) - step;
+		if (value < parseFloat('#minValue#')) {value = parseFloat('#minValue#')};
+		input.value = value + ' #unite#';
+		clearTimeout(window['timerHandle#id#']);
+		window['timerHandle#id#'] = setTimeout(function() {
+			jeedom.cmd.execute({id:'#id#', value:{slider:value}});
+		}, 1000);
+	});
+
+    document.querySelector('.cmd[data-cmd_uid="#uid#"] .bt_minusminus').addEventListener('click', function() {
+		let input = document.querySelector('.cmd[data-cmd_uid="#uid#"] .in_value');
+		let step = 10;
+		let value = parseFloat(input.value.replace("#unite#", "").replace(" ", "")) - step;
+		if (value < parseFloat('#minValue#')) {value = parseFloat('#minValue#')};
+		input.value = value + ' #unite#';
+		clearTimeout(window['timerHandle#id#']);
+		window['timerHandle#id#'] = setTimeout(function() {
+			jeedom.cmd.execute({id:'#id#', value:{slider:value}});
+		}, 1000);
+	});
+
+	jeedom.cmd.addUpdateFunction('#id#',function(_options) {
+		$('.cmd[data-cmd_uid=#uid#] .in_value').val(_options.display_value+' #unite#');
+	});
+	jeedom.cmd.refreshValue([{cmd_id :'#id#', display_value:'#state#', valueDate:'#valueDate#', collectDate:'#collectDate#', alertLevel:'#alertLevel#', unit:'#unite#'}]);
+	</script>
+</div>

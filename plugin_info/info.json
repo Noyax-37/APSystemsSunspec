@@ -1,7 +1,7 @@
 {
 	"id" : "APSystemsSunspec",
 	"name" : "APSystems Sunspec",
-	"pluginVersion": "v1.5",
+	"pluginVersion": "v1.6",
 	"description": {
 		"fr_FR": "Plugin permettant de récupérer les données des onduleurs APSystems via le protocole Sunspec."
 	},

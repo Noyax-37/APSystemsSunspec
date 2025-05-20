@@ -3,6 +3,71 @@ renommer fichiers et répertoire avec "_APSystemsSunspec"
 Dans fichier "cmd.info.string.distribution_onduleur_APSystemsSunspec.html":
 - renommer "data/customTemplates/dashboard/cmd.info.string.distribution_onduleur" en "plugins/APSystemsSunspec/core/template/dashboard/cmd.info.string.distribution_onduleur_APSystemsSunspec"
 - renommer "cmds[j].name" en "cmds[j].configuration['widget']" (on prend l'info dans la config et plus dans le nom de la commande)
+- remplacer le bloc suivant pour que les MO jusqu'à 6 max soient dans l'ordre:
+
+              if (solar == 1) {
+                x_rect = (config#id#.solar.mppts == 1) ? 205 : 156 //154
+                path_solar = 'M 191 95 L 191 135 Q 191 143 199 144 L 205 144'
+                //path_solar = 'M ' + (x_rect + 35) + ' 95 L ' + (x_rect + 35) + ' 132 Q ' + (x_rect + 35) + ' 143 195 144 L 205 143'
+              } else if (solar == 2) {
+                x_rect = 254
+                x_voltage = x_current = x_rect + 30
+                path_solar = 'M 289 95 L 289 135 Q 289 143 281 144 L 275 144'
+              } else if (solar == 3) {
+                x_rect = 80
+                path_solar = 'M 115 95 L 115 135 Q 115 143 123 144 L 205 144'
+              } else if (solar == 4) {
+                x_rect = 330
+                path_solar = 'M 365 95 L 365 135 Q 365 143 357 144 L 275 144'
+              } else if (solar == 5) {
+                x_rect = 2
+                path_solar = 'M 37 95 L 37 135 Q 37 143 45 144 L 205 144'
+              } else if (solar == 6) {
+                x_rect = 406
+                path_solar = 'M 441 95 L 441 135 Q 441 143 433 144 L 275 144'
+              }
+
+
+  par le bloc suivant:
+
+                  if ((config#id#.solar.mppts <= 2 && solar == 1) || ((config#id#.solar.mppts == 3 || config#id#.solar.mppts == 4) && solar ==2) || ((config#id#.solar.mppts == 5 || config#id#.solar.mppts == 6) && solar ==3)) {
+                  x_rect = (config#id#.solar.mppts == 1) ? 205 : 156 //154
+                  path_solar = 'M 191 95 L 191 135 Q 191 143 199 144 L 205 144'
+                  //path_solar = 'M ' + (x_rect + 35) + ' 95 L ' + (x_rect + 35) + ' 132 Q ' + (x_rect + 35) + ' 143 195 144 L 205 143'
+                } else if ((config#id#.solar.mppts == 2 && solar ==2) || ((config#id#.solar.mppts == 3 || config#id#.solar.mppts == 4) && solar ==3) || ((config#id#.solar.mppts == 5 || config#id#.solar.mppts == 6) && solar ==4)) {
+                  x_rect = 254
+                  x_voltage = x_current = x_rect + 30
+                  path_solar = 'M 289 95 L 289 135 Q 289 143 281 144 L 275 144'
+                } else if (((config#id#.solar.mppts == 3 || config#id#.solar.mppts == 4) && solar ==1) || ((config#id#.solar.mppts == 5 || config#id#.solar.mppts == 6) && solar ==2)) {
+                  x_rect = 80
+                  path_solar = 'M 115 95 L 115 135 Q 115 143 123 144 L 205 144'
+                } else if ((config#id#.solar.mppts == 4 && solar == 4) || ((config#id#.solar.mppts == 5 || config#id#.solar.mppts == 6) && solar ==5)) {
+                  x_rect = 330
+                  path_solar = 'M 365 95 L 365 135 Q 365 143 357 144 L 275 144'
+                } else if (((config#id#.solar.mppts == 5 || config#id#.solar.mppts == 6) && solar ==1)) {
+                  x_rect = 2
+                  path_solar = 'M 37 95 L 37 135 Q 37 143 45 144 L 205 144'
+                } else if (config#id#.solar.mppts == 6 && solar == 6) {
+                  x_rect = 406
+                  path_solar = 'M 441 95 L 441 135 Q 441 143 433 144 L 275 144'
+                }
+
+- insérer "          display_grid: true," après "grid: {" (ligne 380 environ)
+- insérer "           if (config#id#.grid.display_grid){" après le bloc (ligne 1730 environ):
+            ///////////////////////////////////////////////////////
+            /////////////////////  Grid ///////////////////////////
+            ///////////////////////////////////////////////////////
+- insérer "           }" à la fin du bloc après la ligne "html += '<circle id="tempo_tomorrow_circle#id#" cx="66" cy="238" r="6" fill="transparent"></circle>'"
+- insérer "      <div>displayGrid : Affiche ou fait disparaitre tous les éléments concernant le réseau électrique. (0 ou 1, défaut : 1)</div>" entre "       <div> ------------ Grid ------------</div>" et "      <div>dailyGridSellText : Personnalisation du texte. (défaut : DAILY GRID SELL)</div>"
+- insérer entre "      ////////////////////////// GRID ////////////////////////" et "      if ("#dailyGridSellText#" != '#'+'dailyGridSellText#') config#id#.grid.daily.text_sell = "#dailyGridSellText#"":
+    if ("#displayGrid" != '#' + 'displayGrid#' && "#displayGrid#" == '1') {
+      config#id#.grid.display_grid = true;
+    } else {
+      config#id#.grid.display_grid = false;
+    }
+- remplacer "          if (config#id#.grid.status === 1) {" par "          if (config#id#.grid.status === 1 && config#id#.grid.display_grid) {" (ligne 2515 environ)
+
+
 
 Modifier l'entête:
   <!-- ################ Distribution onduleur ################ 

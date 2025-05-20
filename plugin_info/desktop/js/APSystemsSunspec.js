@@ -360,14 +360,13 @@ $(document).ready(function() {
       }
     });
   });
-  
+
   // Scan des micro-onduleurs
   $('#scanMicroInverters').on('click', function() {
     console.log('Clic sur Scan des micro-onduleurs');
     var eqLogicId = $('.eqLogicAttr[data-l1key="id"]').val();
     var objectId = $('.eqLogicAttr[data-l1key="object_id"]').val();
     var ifChecked = $('#scanMicroInvertersCheck').is(':checked');
-    var ifDisplayChecked = $('#DisplayMicroInvertersCheck').is(':checked');
     var unique = $('#scanUnique').is(':checked');
     var uniqueId = $('#scanUniqueId').val();
     if (unique) {
@@ -384,7 +383,7 @@ $(document).ready(function() {
       $('#div_alert').showAlert({ message: '{{Aucun équipement sélectionné}}', level: 'danger' });
       return;
     }
-    console.log('Envoi AJAX avec ID : ' + eqLogicId + ' avec Object ID : ' + objectId + ' et Unique : ' + unique);
+    console.log('Envoi AJAX avec ID : ' + eqLogicId + ' avec Object ID : ' + objectId);
     $.ajax({
       type: 'POST',
       url: 'plugins/APSystemsSunspec/core/ajax/APSystemsSunspec.ajax.php',
@@ -393,7 +392,6 @@ $(document).ready(function() {
         id: eqLogicId,
         obj: objectId,
         check: ifChecked,
-        displaycheck: ifDisplayChecked,
         unique: unique,
         uniqueId: uniqueId
       },

@@ -11,9 +11,10 @@ try {
         $eqLogicId = init('id');
         $objectId = init('obj');
         $ifchecked = init('check');
+        $ifdisplaychecked = init('displaycheck');
         $uniqueId = init('uniqueId');
-        $unique = init('unique');
-        log::add('APSystemsSunspec', 'debug', 'ID reçu pour scan : ' . ($eqLogicId ? $eqLogicId : 'null'));
+        $unique = init('unique') == 'false' ? false : true;
+        log::add('APSystemsSunspec', 'debug', 'ID reçu pour scan : ' . ($eqLogicId ? $eqLogicId : 'null') . ' unique : ' . $unique);
         if ($unique) {
             log::add('APSystemsSunspec', 'debug', 'ID unique reçu pour scan : ' . ($uniqueId ? $uniqueId : 'null'));
         }
@@ -24,12 +25,13 @@ try {
         if (!is_object($eqLogic)) {
             throw new Exception(__('EqLogic inconnu. Vérifier l\'ID : ', __FILE__) . $eqLogicId);
         }
-        $eqLogic->scanMicroInverters($objectId, $ifchecked, $unique, $uniqueId);
+        $eqLogic->scanMicroInverters($objectId, $ifchecked, $unique, $uniqueId, $ifdisplaychecked);
         ajax::success();
     }
 
     if (init('action') == 'refreshTout') {
         $eqLogicId = init('id');
+        log::add('APSystemsSunspec', 'info', __("Mise à jour complète des données de l'ECU", __FILE__));
         log::add('APSystemsSunspec', 'debug', 'ID reçu pour données : ' . ($eqLogicId ? $eqLogicId : 'null'));
         if (!$eqLogicId) {
             throw new Exception(__('ID de l\'équipement non fourni', __FILE__));
@@ -38,7 +40,7 @@ try {
         if (!is_object($eqLogic)) {
             throw new Exception(__('EqLogic inconnu. Vérifier l\'ID : ', __FILE__) . $eqLogicId);
         }
-        $eqLogic->getECUData();
+        $eqLogic->getECUData(true); // true pour forcer la mise à jour complète des données MO de l'ECU
         ajax::success();
     }
     

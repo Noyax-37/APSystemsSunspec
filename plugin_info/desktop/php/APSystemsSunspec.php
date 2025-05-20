@@ -177,18 +177,17 @@ function displayActionCard($action_name, $fa_icon, $action = '', $class = '') {
                             <div class="form-group ecu-container">
                                 <div class="form-group">
                                     <label class="col-sm-4 control-label">{{Scan pour ajouter ou mettre à jour les MO de l'ECU}}</label>
+                                    <div class="col-sm-2">
+                                        <a class="btn btn-primary scan-button" id="scanMicroInverters"><i class="fa fa-search"></i> {{Scan des micro-onduleurs}}</a>
+                                    </div>
                                     <div class="col-sm-6">
                                         <label class="checkbox-inline"><input type="checkbox" class="scan-check" id="scanMicroInvertersCheck" checked>{{ conserver le nom des commandes}}</label>
                                         <sup><i class="fas fa-question-circle tooltips" title="{{Dans le cas d'une mise à jour, si vous voulez conserver les noms personnalisés qui vous avez affectés aux commandes}}"></i></sup>
                                     </div>
-                                    <div class="col-sm-6">
-                                        <label class="checkbox-inline"><input type="checkbox" class="scan-check" id="DisplayMicroInvertersCheck" checked>{{ conserver l'affichage actuel des tuiles}}</label>
-                                        <sup><i class="fas fa-question-circle tooltips" title="{{Dans le cas d'une mise à jour, laisser coché si vous voulez conserver l'affichage personalisé que vous auriez pu faire sur le dashboard}}"></i></sup>
-                                    </div>
                                 </div>
                                 <div class="form-group">
                                     <label class="col-sm-4 control-label">{{ }}</label>
-                                    <label class="col-sm-8">{{Nécessaire uniquement dans le cas d'un nouvel MO ou si la numérotation des MO n'est pas continue:}}</label>
+                                    <label class="col-sm-4">{{Nécessaire uniquement dans le cas d'un nouvel MO:}}</label>
                                 </div>
                                 <div class="form-group">
                                 <label class="col-sm-4 control-label">{{ }}</label>
@@ -200,12 +199,7 @@ function displayActionCard($action_name, $fa_icon, $action = '', $class = '') {
                                         <input type="text" class="form-control" id="scanUniqueId" placeholder="{{ID du MO à scanner}}" />
                                     </div>
                                 </div>
-                                <label class="col-sm-4 control-label">{{ }}</label>
-                                <div class="col-sm-2">
-                                        <a class="btn btn-primary scan-button" id="scanMicroInverters"><i class="fa fa-search"></i> {{Scan des micro-onduleurs}}</a>
-                                </div>
                             </div>
-                            <br>
                             <div class="form-group ecu-container">
                                 <div class="form-group">
                                     <label class="col-sm-4 control-label">{{MAJ toutes les données ECU}}</label>

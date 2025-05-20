@@ -92,7 +92,7 @@ class ModbusClient {
         $totalLength = 7 + (2 + $quantity * 2); // 11 octets pour 1 registre
         $response = '';
         $bytesRead = 0;
-        $timeoutSec = 3; // Réduit à 3s pour les IDs non connectés
+        $timeoutSec = $this->timeout; 
         $startTime = time();
 
         while ($bytesRead < $totalLength && (time() - $startTime) < $timeoutSec) {
@@ -199,6 +199,87 @@ class ModbusClient {
             throw new Exception("Réponse invalide : écriture non confirmée");
         }
 
+        return true;
+    }
+
+    public function writeMultipleRegisters($startRegister, $values) {
+        if (!$this->socket || !$this->slaveId) {
+            throw new Exception("Connexion non établie ou ID esclave non défini");
+        }
+    
+        $quantity = count($values);
+        if ($quantity < 1 || $quantity > 123) {
+            throw new Exception("Quantité invalide : $quantity (doit être entre 1 et 123)");
+        }
+    
+        foreach ($values as $value) {
+            if (!is_int($value) || $value < 0 || $value > 65535) {
+                throw new Exception("Valeur invalide : $value (doit être un entier entre 0 et 65535)");
+            }
+        }
+    
+        $this->transactionId++;
+        if ($this->transactionId > 65535) {
+            $this->transactionId = 1;
+        }
+    
+        // Calculer le Byte Count (nombre de registres * 2)
+        $byteCount = $quantity * 2;
+    
+        // Construire le tableau de données pour pack
+        $format = 'nnnCCnnC';
+        $data = [
+            $this->transactionId, // Transaction ID
+            0,                   // Protocol ID
+            6 + 1 + $byteCount,  // Length (6 octets de base + Byte Count + données)
+            $this->slaveId,      // Unit ID
+            16,                  // Function Code (0x10)
+            $startRegister,      // Starting Address
+            $quantity,           // Quantity of Registers
+            $byteCount           // Byte Count
+        ];
+    
+        // Ajouter les valeurs des registres au format
+        for ($i = 0; $i < $quantity; $i++) {
+            $format .= 'n';
+            $data[] = $values[$i];
+        }
+    
+        // Construire la requête
+        $request = call_user_func_array('pack', array_merge([$format], $data));
+    
+        // Écrire la requête
+        $bytesWritten = @fwrite($this->socket, $request);
+        if ($bytesWritten === false || $bytesWritten < strlen($request)) {
+            if (class_exists('log')) {
+                log::add('APSystemsSunspec', 'error', "Échec envoi écriture multiple : $bytesWritten octets écrits sur " . strlen($request));
+            }
+            $this->close();
+            $this->connect();
+            $bytesWritten = @fwrite($this->socket, $request);
+            if ($bytesWritten === false || $bytesWritten < strlen($request)) {
+                throw new Exception("Échec persistant de l'envoi de la requête Modbus");
+            }
+        }
+    
+        // Lire la réponse (12 octets : 7 MBAP + 5 PDU)
+        $response = @fread($this->socket, 12);
+        if ($response === false || strlen($response) != 12) {
+            throw new Exception("Réponse Modbus incomplète ou invalide");
+        }
+    
+        // Décomposer la réponse
+        $responseData = unpack('ntransId/nproto/nlength/Cslave/Cfunc/nregister/nquantity', $response);
+        if ($responseData['func'] == 0x90) {
+            $errorCode = unpack('Cerror', substr($response, 8, 1))['error'];
+            throw new Exception("Erreur Modbus : Code $errorCode");
+        }
+    
+        // Vérifier que la réponse est correcte
+        if ($responseData['func'] != 16 || $responseData['register'] != $startRegister || $responseData['quantity'] != $quantity) {
+            throw new Exception("Réponse invalide : écriture multiple non confirmée");
+        }
+    
         return true;
     }
 
